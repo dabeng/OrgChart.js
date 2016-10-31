@@ -1,6 +1,7 @@
 export default class OrgChart {
   constructor({
     chartContainer,
+    data,
     nodeTitle = 'name',
     nodeId = 'id',
     toggleSiblingsResp = false,
@@ -15,19 +16,21 @@ export default class OrgChart {
     zoom = false
   } = {}) {
     this._name = 'OrgChart';
-    this.chartContainer = chartContainer;
-    this.nodeTitle = nodeTitle;
-    this.nodeId = nodeId;
-    this.toggleSiblingsResp = toggleSiblingsResp;
-    this.depth = depth;
-    this.chartClass = chartClass;
-    this.exportButton = exportButton;
-    this.exportFilename = exportFilename;
-    this.parentNodeSymbol = parentNodeSymbol;
-    this.draggable = draggable;
-    this.direction = direction;
-    this.pan = pan,
-    this.zoom = zoom;
+    this.options = {
+      'chartContainer': chartContainer,
+      'nodeTitle': nodeTitle,
+      'nodeId': nodeId,
+      'toggleSiblingsResp': toggleSiblingsResp,
+      'depth': depth,
+      'chartClass': chartClass,
+      'exportButton': exportButton,
+      'exportFilename': exportFilename,
+      'parentNodeSymbol': parentNodeSymbol,
+      'draggable': draggable,
+      'direction': direction,
+      'pan': pan,
+      'zoom': zoom
+    };
 
     this._init();
   }
@@ -36,6 +39,7 @@ export default class OrgChart {
   }
   _init() {
     // build the org-chart
+    var opts = this.options
     var data = opts.data;
     var $chart = $('<div>', {
       'data': { 'options': opts },
