@@ -1,6 +1,6 @@
-export default class Library {
+export default class OrgChart {
   constructor() {
-    this._name = 'Library';
+    this._name = 'OrgChart';
   }
   get name() {
     return this._name;
