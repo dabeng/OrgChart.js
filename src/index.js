@@ -48,7 +48,7 @@ export default class OrgChart {
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
     chart.addEventListener('click', function (event) {
       let node = this._closest(event.target, function (el) {
-        return el.className === 'node';
+        return el.classList.contains('node');
       });
 
       if (!node) {
@@ -127,107 +127,146 @@ export default class OrgChart {
     }
     return data;
   }
+  hoverNode(event) {
+    let node = event.target,
+      flag = false;
+      topEdge = node.querySelector(':scope > .topEdge');
+      rightEdge = node.querySelector(':scope > .rightEdge');
+      bottomEdge = node.querySelector(':scope > .bottomEdge');
+      leftEdge = node.querySelector(':scope > .leftEdge');
+    if (event.type === 'mouseenter') {
+      if (topEdge) {
+        flag = getNodeState(node, 'parent').visible;
+        topEdge.classList.toggle('fa-chevron-up', !flag)
+        topEdge.classList.toggle('fa-chevron-down', flag);
+      }
+      if (bottomEdge) {
+        flag = getNodeState(node, 'children').visible;
+        bottomEdge.classList.toggle('fa-chevron-down', !flag)
+        bottomEdge.classList.toggle('fa-chevron-up', flag);
+      }
+      if (leftEdge) {
+        switchHorizontalArrow(node);
+      }
+    } else {
+      node.querySelector(':scope > .edge').classList.remove('fa-chevron-up', 'fa-chevron-down', 'fa-chevron-right', 'fa-chevron-left');
+    }
+  });
+  // define click event handler
+  _clickNode(event) {
+    let node = event.target;
+    let chart = this._closest(node, function (el) {
+      return el.classList.contains('orgchart');
+    });
+    chart.querySelector('.focused').classList.remove('focused');
+    node.classList.add('focused');
+  }
+  // define click event handler for the top edge
+  _clickTopEdge(event) {
+    event.stopPropagation();
+    let topEdge = event.target,
+      node = topEdge.parentNode,
+      parentState = getNodeState(node, 'parent');
+
+    if (parentState.exist) {
+      let temp = this._closest(node, function (el) {
+        return el.classList.contains('nodes');
+      });
+      var parent = temp.parentNode.firstChild.querySelector('.node');
+      if (parent.classList.contains('slide')) { return; }
+      // hide the ancestor nodes and sibling nodes of the specified node
+      if (parentState.visible) {
+        hideAncestorsSiblings($node);
+        parent.one('transitionend', function() {
+          if (isInAction($node)) {
+            switchVerticalArrow(topEdge);
+            switchHorizontalArrow(node);
+          }
+        });
+      } else { // show the ancestors and siblings
+        showParent(node);
+      }
+    } else {
+      // load the new parent node of the specified node by ajax request
+      var nodeId = topEdge.parent()[0].id;
+      // start up loading status
+      if (startLoading(topEdge, node, opts)) {
+      // load new nodes
+        $.ajax({ 'url': $.isFunction(opts.ajaxURL.parent) ? opts.ajaxURL.parent(nodeData) : opts.ajaxURL.parent + nodeId, 'dataType': 'json' })
+        .done(function(data) {
+          if ($node.closest('.orgchart').data('inAjax')) {
+            if (!$.isEmptyObject(data)) {
+              addParent.call(node.closest('.orgchart').parent(), node, data, opts);
+            }
+          }
+        })
+        .fail(function() { console.log('Failed to get parent node data'); })
+        .always(function() { endLoading(topEdge, $node, opts); });
+      }
+    }
+  });
   // create node
   _createNode(nodeData, level, opts) {
     return new Promise(function(resolve, reject) {
-      $.each(nodeData.children, function (index, child) {
+      for (let child of nodeData.chilren) {
         child.parentId = nodeData.id;
       })
 
     // construct the content of node
-    var $nodeDiv = $('<div' + (opts.draggable ? ' draggable="true"' : '') + (nodeData[opts.nodeId] ? ' id="' + nodeData[opts.nodeId] + '"' : '') + (nodeData.parentId ? ' data-parent="' + nodeData.parentId + '"' : '') + '>')
-      .addClass('node ' + (nodeData.className || '') +  (level >= opts.depth ? ' slide-up' : ''))
-      .append('<div class="title">' + nodeData[opts.nodeTitle] + '</div>')
-      .append(typeof opts.nodeContent !== 'undefined' ? '<div class="content">' + (nodeData[opts.nodeContent] || '') + '</div>' : '');
+    let nodeDiv = document.createElement('div');
+    if (nodeData[opts.nodeId]) {
+      nodeDiv.id = nodeData[opts.nodeId];
+    }
+    nodeData.setAttribute('class', 'node ' + (nodeData.className || '') +  (level >= opts.depth ? ' slide-up' : ''));
+    if (opts.draggable) {
+      nodeDiv.setAttribute('draggable', true);
+    }
+    if (nodeData.parentId) {
+      nodeDiv.setAttribute('data-parent', nodeData.parentId);
+    }
+    nodeDiv.innerHTML = `
+      <div class="title">${nodeData[opts.nodeTitle]}</div>
+      ${opts.nodeContent ? `<div class="content">${nodeData[opts.nodeContent]}</div>` : ''}
+    `;
     // append 4 direction arrows or expand/collapse buttons
-    var flags = nodeData.relationship || '';
+    let flags = nodeData.relationship || '';
+
     if (opts.verticalDepth && (level + 2) > opts.verticalDepth) {
       if ((level + 1) >= opts.verticalDepth && Number(flags.substr(2,1))) {
-        $nodeDiv.append('<i class="toggleBtn fa fa-minus-square"></i>');
+        let toggleBtn = document.createElement('i');
+        toggleBtn.setAttribute('class', 'toggleBtn fa fa-minus-square');
+        nodeDiv.appendChild(toggleBtn);
       }
     } else {
       if (Number(flags.substr(0,1))) {
-        $nodeDiv.append('<i class="edge verticalEdge topEdge fa"></i>');
+        let topEdge = document.createElement('i');
+        topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
+        $nodeDiv.appendChild(topEdge);
       }
       if(Number(flags.substr(1,1))) {
-        $nodeDiv.append('<i class="edge horizontalEdge rightEdge fa"></i>' +
-          '<i class="edge horizontalEdge leftEdge fa"></i>');
+        let rightEdge = document.createElement('i');
+        rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+        nodeDiv.appendChild(rightEdge);
+        let leftEdge = document.createElement('i');
+        rightEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
+        nodeDiv.appendChild(leftEdge);
       }
       if(Number(flags.substr(2,1))) {
-        $nodeDiv.append('<i class="edge verticalEdge bottomEdge fa"></i>')
-          .children('.title').prepend('<i class="fa '+ opts.parentNodeSymbol + ' symbol"></i>');
+        let bottomEdge = document.createElement('i');
+        bottomEdge.setAttribute('class', 'edge verticalEdge bottomEdge fa');
+        nodeDiv.appendChild(bottomEdge);
+        let symbol = document.createElement('i');
+        symbol.setAttribute('class', 'fa '+ opts.parentNodeSymbol + ' symbol');
+        let title = nodeDiv.querySelector('.scope > .title');
+        title.insertBefore(symbol, title.children[0]);
       }
     }
 
-    $nodeDiv.on('mouseenter mouseleave', function(event) {
-      var $node = $(this), flag = false;
-      var $topEdge = $node.children('.topEdge');
-      var $rightEdge = $node.children('.rightEdge');
-      var $bottomEdge = $node.children('.bottomEdge');
-      var $leftEdge = $node.children('.leftEdge');
-      if (event.type === 'mouseenter') {
-        if ($topEdge.length) {
-          flag = getNodeState($node, 'parent').visible;
-          $topEdge.toggleClass('fa-chevron-up', !flag).toggleClass('fa-chevron-down', flag);
-        }
-        if ($bottomEdge.length) {
-          flag = getNodeState($node, 'children').visible;
-          $bottomEdge.toggleClass('fa-chevron-down', !flag).toggleClass('fa-chevron-up', flag);
-        }
-        if ($leftEdge.length) {
-          switchHorizontalArrow($node);
-        }
-      } else {
-        $node.children('.edge').removeClass('fa-chevron-up fa-chevron-down fa-chevron-right fa-chevron-left');
-      }
-    });
+    nodeDiv.addEventListener('mouseenter', this._hoverNode);
+    nodeDiv.addEventListener('mouseleave', this._hoverNode);
+    nodeDiv.addEventListener('click', this._clickNode);
+    nodeDiv.querySelector('.topEdge').addEventListener('click', clickTopEdge);
 
-    // define click event handler
-    $nodeDiv.on('click', function(event) {
-      $(this).closest('.orgchart').find('.focused').removeClass('focused');
-      $(this).addClass('focused');
-    });
-
-    // define click event handler for the top edge
-    $nodeDiv.on('click', '.topEdge', function(event) {
-      event.stopPropagation();
-      var $that = $(this);
-      var $node = $that.parent();
-      var parentState = getNodeState($node, 'parent');
-      if (parentState.exist) {
-        var $parent = $node.closest('table').closest('tr').siblings(':first').find('.node');
-        if ($parent.is('.slide')) { return; }
-        // hide the ancestor nodes and sibling nodes of the specified node
-        if (parentState.visible) {
-          hideAncestorsSiblings($node);
-          $parent.one('transitionend', function() {
-            if (isInAction($node)) {
-              switchVerticalArrow($that);
-              switchHorizontalArrow($node);
-            }
-          });
-        } else { // show the ancestors and siblings
-          showParent($node);
-        }
-      } else {
-        // load the new parent node of the specified node by ajax request
-        var nodeId = $that.parent()[0].id;
-        // start up loading status
-        if (startLoading($that, $node, opts)) {
-        // load new nodes
-          $.ajax({ 'url': $.isFunction(opts.ajaxURL.parent) ? opts.ajaxURL.parent(nodeData) : opts.ajaxURL.parent + nodeId, 'dataType': 'json' })
-          .done(function(data) {
-            if ($node.closest('.orgchart').data('inAjax')) {
-              if (!$.isEmptyObject(data)) {
-                addParent.call($node.closest('.orgchart').parent(), $node, data, opts);
-              }
-            }
-          })
-          .fail(function() { console.log('Failed to get parent node data'); })
-          .always(function() { endLoading($that, $node, opts); });
-        }
-      }
-    });
 
     // bind click event handler for the bottom edge
     $nodeDiv.on('click', '.bottomEdge', function(event) {
@@ -498,7 +537,13 @@ export default class OrgChart {
         if (isVerticalNode) {
           nodeWrapper.appendChild(nodeDiv);
         }else {
-          nodeWrapper.appendChild($nodeDiv.wrap('<tr><td' + (hasChildren ? ' colspan="' + $childNodes.length * 2 + '"' : '') + '></td></tr>').closest('tr'));
+          let tr = document.createElement('tr');
+          tr.innerHTML = `
+            <td ${hasChildren ? `colspan="${childNodes.length * 2}"` : ''}>
+            </td>
+          `;
+          tr.firstChild.appendChild(nodeDiv);
+          nodeWrapper.appendChild(tr);
         }
         if (callback) {
           callback();
@@ -518,32 +563,60 @@ export default class OrgChart {
 
       // draw the line close to parent node
       if (!isVerticalLayer) {
-        $nodeWrapper.append('<tr class="lines' + isHidden + '"><td colspan="' + $childNodes.length * 2 + '"><div class="downLine"></div></td></tr>');
+        let tr = document.createElement('tr');
+        tr.setAttribute('class', 'lines' + isHidden);
+        tr.innerHTML = `
+          <td colspan="${childNodes.length * 2}">
+            <div class="downLine"></div>
+          </td>
+        `;
+        nodeWrapper.appendChild(tr);
       }
       // draw the lines close to children nodes
-      var lineLayer = '<tr class="lines' + isHidden + '"><td class="rightLine">&nbsp;</td>';
       for (var i=1; i<$childNodes.length; i++) {
         lineLayer += '<td class="leftLine topLine">&nbsp;</td><td class="rightLine topLine">&nbsp;</td>';
       }
-      lineLayer += '<td class="leftLine">&nbsp;</td></tr>';
-      var $nodeLayer;
+
+      let lineLayer = document.createElement('tr');
+        lineLayer.setAttribute('class', 'lines' + isHidden);
+        lineLayer.innerHTML = `
+          <td class="rightLine"> </td>
+          ${childNodes.map(() => `
+            <td class="leftLine topLine"> </td>
+            <td class="rightLine topLine"> </td>
+          `)}
+          <td class="leftLine"> </td>
+        `;
+      let $nodeLayer;
+
       if (isVerticalLayer) {
-        $nodeLayer = $('<ul>');
+        nodeLayer = document.createElement('<ul>');
         if (level + 2 === opts.verticalDepth) {
-          $nodeWrapper.append('<tr class="verticalNodes"><td></td></tr>')
-            .find('.verticalNodes').children().append($nodeLayer);
+          let tr = document.createElement('tr');
+          tr.setAttribute('class', 'verticalNodes');
+          tr.innerHTML = `<td></td>`;
+          tr.firstChild.appendChild(nodeLayer);
         } else {
-          $nodeWrapper.append($nodeLayer);
+          nodeWrapper.appendChild(nodeLayer);
         }
       } else {
-        $nodeLayer = $('<tr class="nodes' + isHidden + '">');
-        $nodeWrapper.append(lineLayer).append($nodeLayer);
+        nodeLayer = document.createElement('tr');
+        nodeLayer.setAttribute('class', 'nodes' + isHidden);
+        nodeWrapper.appendChild(lineLayer);
+        nodeWrapper.appendChild(nodeLayer);
       }
       // recurse through children nodes
-      $.each($childNodes, function() {
-        var $nodeCell = isVerticalLayer ? $('<li>') : $('<td colspan="2">');
-        $nodeLayer.append($nodeCell);
-        buildHierarchy($nodeCell, this, level + 1, opts, callback);
+      childNodes.map(() => {
+        let $nodeCell;
+
+        if (isVerticalLayer) {
+          nodeCell = document.createElement('li');
+        } else {
+          nodeCell = document.createElement('td');
+          nodeCell.setAttribute('colspan', 2);
+        }
+        nodeLayer.appendChild(nodeCell);
+        buildHierarchy(nodeCell, this, level + 1, opts, callback);
       });
     }
   }
