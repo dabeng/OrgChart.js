@@ -129,6 +129,15 @@ export default class OrgChart {
     }
     return data;
   }
+  _repaint(node) {
+    if (node) {
+      node.style.offsetWidth = node.offsetWidth;
+    }
+  }
+  // whether the cursor is hovering over the node
+  _isInAction(node) {
+    return node.querySelector(':scope > .edge').className.indexOf('fa-') > -1 ? true : false;
+  }
   hoverNode(event) {
     let node = event.target,
       flag = false;
@@ -188,6 +197,123 @@ export default class OrgChart {
       .catch(function(err) {
         console.error('Failed to create parent node', err);
       });
+  }
+  // show the parent node of the specified node
+  showParent(node) {
+    // just show only one superior level
+    let temp = this._closest(node, function (el) {
+      return el.nodeName === 'TABLE';
+    }).parentNode.children;
+    for (let tr of temp) {
+      tr.classList.remove('hidden');
+    }
+    // just show only one line
+    for (let td of temp[2].children.slice(1, -1)) {
+      td.classList.add('hidden');
+    };
+    // show parent node with animation
+    let parent = temp[0].querySelector('.node');
+    repaint(parent);
+    parent.classList.add('slide');
+    parent.classList.remove('slide-down');
+    parent.addEventListener('transitionend', function() {
+      parent.classList.remove('slide');
+      if (isInAction(node)) {
+        switchVerticalArrow(node.querySelector(':scope > .topEdge'));
+      }
+    }, { 'once': true});
+  }
+  // hide the sibling nodes of the specified node
+  hideSiblings(node, direction) {
+    let nodeContainer = this._closest(node, function (el) {
+      return el.nodeName === 'TABLE';
+    }).parentNode;
+
+    let preSib = nodeContainer.previousElementSibling;
+    while (preSib) {
+      if (preSib.querySelector('.spinner')) {
+        this.chart.dataset.inAjax = false;
+        break;
+      }
+      preSib = preSib.previousElementSibling;
+    }
+    let nextSib = nodeContainer.nextElementSibling;
+    while (nextSib) {
+      if (nextSib.querySelector('.spinner')) {
+        this.chart.dataset.inAjax = false;
+        break;
+      }
+      nextSib = nextSib.previousElementSibling;
+    }
+    if (!direction || (direction && direction === 'left')) {
+      preSib = nodeContainer.previousElementSibling;
+      while (preSib) {
+        for (let node of preSib.querySelectorAll('.node')) {
+          if (window.getComputedStyle(node).opacity !== '0') {
+            node.classList.add('slide', 'slide-right');
+          } 
+        }
+        preSib = preSib.previousElementSibling;
+      }
+    }
+    if (!direction || (direction && direction !== 'left')) {
+      $nodeContainer.nextAll().find('.node:visible').addClass('slide slide-left');
+      nextSib = nodeContainer.nextElementSibling;
+      while (nextSib) {
+        for (let node of next.querySelectorAll('.node')) {
+          if (window.getComputedStyle(node).opacity !== '0') {
+            node.classList.add('slide', 'slide-left');
+          } 
+        }
+        nextSib = nextSib.nextElementSibling;
+      }
+    }
+    var $animatedNodes = $nodeContainer.siblings().find('.slide');
+    var $lines = $animatedNodes.closest('.nodes').prevAll('.lines').css('visibility', 'hidden');
+    $animatedNodes.eq(0).one('transitionend', function() {
+      $lines.removeAttr('style');
+      var $siblings = direction ? (direction === 'left' ? $nodeContainer.prevAll(':not(.hidden)') : $nodeContainer.nextAll(':not(.hidden)')) : $nodeContainer.siblings();
+      $nodeContainer.closest('.nodes').prev().children(':not(.hidden)')
+        .slice(1, direction ? $siblings.length * 2 + 1 : -1).addClass('hidden');
+      $animatedNodes.removeClass('slide');
+      $siblings.find('.node:visible:gt(0)').removeClass('slide-left slide-right').addClass('slide-up')
+        .end().find('.lines, .nodes, .verticalNodes').addClass('hidden')
+        .end().addClass('hidden');
+
+      if (isInAction($node)) {
+        switchHorizontalArrow($node);
+      }
+    });
+  }
+  // recursively hide the ancestor node and sibling nodes of the specified node
+  hideAncestorsSiblings(node) {
+    let temp = this._closest(node, function (el) {
+      return el.classList.contains('nodes');
+    }).parentNode.children;
+    if (temp[0].querySelector('.spinner')) {
+      this.chart.dataset.inAjax = false;
+    }
+    // hide the sibling nodes
+    if (getNodeState(node, 'siblings').visible) {
+      hideSiblings(node);
+    }
+    // hide the lines
+    var $lines = $temp.slice(1);
+    $lines.css('visibility', 'hidden');
+    // hide the superior nodes with transition
+    var $parent = $temp.eq(0).find('.node');
+    var grandfatherVisible = getNodeState($parent, 'parent').visible;
+    if ($parent.length && $parent.is(':visible')) {
+      $parent.addClass('slide slide-down').one('transitionend', function() {
+        $parent.removeClass('slide');
+        $lines.removeAttr('style');
+        $temp.addClass('hidden');
+      });
+    }
+    // if the current node has the parent node, hide it recursively
+    if ($parent.length && grandfatherVisible) {
+      hideAncestorsSiblings($parent);
+    }
   }
   // exposed method
   addParent(currentRoot, data, opts) {
@@ -252,6 +378,58 @@ export default class OrgChart {
       }
     }
   });
+// exposed method
+  function addChildren(node, data, opts) {
+    var opts = opts || $node.closest('.orgchart').data('options');
+    var count = 0;
+    buildChildNode.call($node.closest('.orgchart').parent(), $node.closest('table'), data, opts, function() {
+      if (++count === data.children.length) {
+        if (!$node.children('.bottomEdge').length) {
+          $node.append('<i class="edge verticalEdge bottomEdge fa"></i>');
+        }
+        if (!$node.find('.symbol').length) {
+          $node.children('.title').prepend('<i class="fa '+ opts.parentNodeSymbol + ' symbol"></i>');
+        }
+        showDescendants($node);
+      }
+    });
+  }
+  // bind click event handler for the bottom edge
+  _clickBottomEdge(event) {
+      event.stopPropagation();
+      let bottomEdge = event.target,
+        node = bottomEdge.parentNode;
+        childrenState = getNodeState(node, 'children');
+
+      if (childrenState.exist) {
+        var children = node.closest('tr').siblings(':last');
+        if (children.find('.node:visible').is('.slide')) { return; }
+        // hide the descendant nodes of the specified node
+        if (childrenState.visible) {
+          hideDescendants($node);
+        } else { // show the descendants
+          showDescendants($node);
+        }
+      } else { // load the new children nodes of the specified node by ajax request
+        var nodeId = $that.parent()[0].id;
+        if (startLoading($that, $node, opts)) {
+          $.ajax({ 'url': $.isFunction(opts.ajaxURL.children) ? opts.ajaxURL.children(nodeData) : opts.ajaxURL.children + nodeId, 'dataType': 'json' })
+          .done(function(data, textStatus, jqXHR) {
+            if ($node.closest('.orgchart').data('inAjax')) {
+              if (data.children.length) {
+                addChildren($node, data, $.extend({}, opts, { depth: 0 }));
+              }
+            }
+          })
+          .fail(function(jqXHR, textStatus, errorThrown) {
+            console.log('Failed to get children nodes data');
+          })
+          .always(function() {
+            endLoading($that, $node, opts);
+          });
+        }
+      }
+    });
   // create node
   _createNode(nodeData, level, opts) {
     return new Promise(function(resolve, reject) {
@@ -313,43 +491,10 @@ export default class OrgChart {
     nodeDiv.addEventListener('mouseleave', this._hoverNode);
     nodeDiv.addEventListener('click', this._clickNode);
     nodeDiv.querySelector('.topEdge').addEventListener('click', clickTopEdge);
+    nodeDiv.querySelector('.bottomEdge').addEventListener('click', clickBottomEdge);
 
 
-    // bind click event handler for the bottom edge
-    $nodeDiv.on('click', '.bottomEdge', function(event) {
-      event.stopPropagation();
-      var $that = $(this);
-      var $node = $that.parent();
-      var childrenState = getNodeState($node, 'children');
-      if (childrenState.exist) {
-        var $children = $node.closest('tr').siblings(':last');
-        if ($children.find('.node:visible').is('.slide')) { return; }
-        // hide the descendant nodes of the specified node
-        if (childrenState.visible) {
-          hideDescendants($node);
-        } else { // show the descendants
-          showDescendants($node);
-        }
-      } else { // load the new children nodes of the specified node by ajax request
-        var nodeId = $that.parent()[0].id;
-        if (startLoading($that, $node, opts)) {
-          $.ajax({ 'url': $.isFunction(opts.ajaxURL.children) ? opts.ajaxURL.children(nodeData) : opts.ajaxURL.children + nodeId, 'dataType': 'json' })
-          .done(function(data, textStatus, jqXHR) {
-            if ($node.closest('.orgchart').data('inAjax')) {
-              if (data.children.length) {
-                addChildren($node, data, $.extend({}, opts, { depth: 0 }));
-              }
-            }
-          })
-          .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log('Failed to get children nodes data');
-          })
-          .always(function() {
-            endLoading($that, $node, opts);
-          });
-        }
-      }
-    });
+
 
     // event handler for toggle buttons in Hybrid(horizontal + vertical) OrgChart
     $nodeDiv.on('click', '.toggleBtn', function(event) {
