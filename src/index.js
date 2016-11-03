@@ -43,6 +43,8 @@ export default class OrgChart {
       data = opts.data,
       chart = document.createElement('div');
 
+    this.chart = chart;
+
     chart.setAttribute('data-options', opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
@@ -152,7 +154,7 @@ export default class OrgChart {
       node.querySelector(':scope > .edge').classList.remove('fa-chevron-up', 'fa-chevron-down', 'fa-chevron-right', 'fa-chevron-left');
     }
   });
-  // define click event handler
+  // define node click event handler
   _clickNode(event) {
     let node = event.target;
     let chart = this._closest(node, function (el) {
@@ -161,12 +163,50 @@ export default class OrgChart {
     chart.querySelector('.focused').classList.remove('focused');
     node.classList.add('focused');
   }
+  // build the parent node of specific node
+  _buildParentNode(currentRoot, nodeData, opts, callback) {
+    let table = document.createElement('table');
+
+    nodeData.relationship = '001';
+    this.createNode(nodeData, 0, opts || this.chart.dataset.options)
+      .then(function(nodeDiv) {
+        let chart = this.chart;
+
+        nodeDiv.classList.remove('slide-up');
+        nodeDiv.classList.add('slide-down');
+        table.innerHTML = `
+          <tr class="hidden"><td colspan="2"></td></tr>
+          <tr class="lines hidden"><td colspan="2"><div class="downLine"></div></td></tr>
+          <tr class="lines hidden"><td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td></tr>
+          <tr class="nodes"><td colspan="2"></td></tr>
+        `;
+        table.firstChild.firstChild.appendChild(nodeDiv);
+        chart.insertBefore(table, chart.firstChild);
+        table.lastChild.firstChild.appendChild(chart.lastChild);
+        callback();
+      })
+      .catch(function(err) {
+        console.error('Failed to create parent node', err);
+      });
+  }
+  // exposed method
+  addParent(currentRoot, data, opts) {
+    this._buildParentNode(currentRoot, data, opts, function() {
+      if (!currentRoot.querySelector(':scope .topEdge').length) {
+        let topEdge = document.createElement('i');
+        topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
+        currentRoot.appendChild(topEdge);
+      }
+      showParent($currentRoot);
+    });
+  }
   // define click event handler for the top edge
   _clickTopEdge(event) {
     event.stopPropagation();
     let topEdge = event.target,
       node = topEdge.parentNode,
-      parentState = getNodeState(node, 'parent');
+      parentState = getNodeState(node, 'parent'),
+      opts = this.dataset.options;
 
     if (parentState.exist) {
       let temp = this._closest(node, function (el) {
@@ -176,32 +216,39 @@ export default class OrgChart {
       if (parent.classList.contains('slide')) { return; }
       // hide the ancestor nodes and sibling nodes of the specified node
       if (parentState.visible) {
-        hideAncestorsSiblings($node);
-        parent.one('transitionend', function() {
-          if (isInAction($node)) {
+        hideAncestorsSiblings(node);
+        parent.addEventListener('transitionend', function() {
+          if (isInAction(node)) {
             switchVerticalArrow(topEdge);
             switchHorizontalArrow(node);
           }
-        });
+        }, { 'once': true });
       } else { // show the ancestors and siblings
         showParent(node);
       }
     } else {
       // load the new parent node of the specified node by ajax request
-      var nodeId = topEdge.parent()[0].id;
+      var nodeId = topEdge.parentNode.id;
       // start up loading status
       if (startLoading(topEdge, node, opts)) {
-      // load new nodes
-        $.ajax({ 'url': $.isFunction(opts.ajaxURL.parent) ? opts.ajaxURL.parent(nodeData) : opts.ajaxURL.parent + nodeId, 'dataType': 'json' })
-        .done(function(data) {
-          if ($node.closest('.orgchart').data('inAjax')) {
-            if (!$.isEmptyObject(data)) {
-              addParent.call(node.closest('.orgchart').parent(), node, data, opts);
+        // load new nodes
+        this._getJSON(typeof opts.ajaxURL.parent === 'function' ? opts.ajaxURL.parent(nodeData) : opts.ajaxURL.parent + nodeId)
+        .then(function(resp) {
+          let chart = this._closest(node, function (el) {
+            return el.classList.contains('orgchart');
+          });
+          if (chart.dataset.inAjax)) {
+            if (!Object.keys(resp).length) {
+              this.addParent(node, data, opts);
             }
           }
         })
-        .fail(function() { console.log('Failed to get parent node data'); })
-        .always(function() { endLoading(topEdge, $node, opts); });
+        .catch(function(err) {
+          console.error('Failed to get parent node data.', err);
+        })
+        .finally(function() {
+          this._endLoading(topEdge, node, opts);
+        });
       }
     }
   });
