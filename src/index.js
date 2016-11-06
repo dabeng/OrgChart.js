@@ -83,6 +83,48 @@ export default class OrgChart {
   _closest(el, fn) {
     return el && (fn(el) ? el : closest(el.parentNode, fn));
   }
+  _siblings(el, expr) {
+    let sibs = [];
+    for (let child of el.parseNode.children) {
+      if (child !== el ) {
+        if (expr) {
+          if (el.matches(expr)) {
+            sibs.push(child);
+          }
+        } else {
+          sibs.push(child);
+        }
+      }
+    }
+    return sibs;
+  }
+  _prevAll(el, selector) {
+    let sibs = [];
+    let preSib = el.previousElementSibling;
+
+    while (preSib) {
+      if (!selector || el.matches(selector)) {
+        sibs.push(preSib);
+      }
+      preSib = preSib.previousElementSibling;
+    }
+    return sibs;
+  }
+  _nextAll(el) {
+    let sibs = [];
+    let nextSib = el.nextElementSibling;
+
+    while (nextSib) {
+      if (!selector || el.matches(selector)) {
+        sibs.push(nextSib);
+      }
+      nextSib = nextSib.nextElementSibling;
+    }
+    return sibs;
+  }
+  _isCollpased(el) {
+    return window.getComputedStyle(el).opacity === '0';
+  }
   _getJSON(url) {
     return new Promise(function(resolve, reject){
       var client = new XMLHttpRequest();
@@ -229,39 +271,28 @@ export default class OrgChart {
       return el.nodeName === 'TABLE';
     }).parentNode;
 
-    let preSib = nodeContainer.previousElementSibling;
-    while (preSib) {
-      if (preSib.querySelector('.spinner')) {
+    let siblings = this._siblings(nodeContainer);
+    for (let sib of siblings) {
+      if (sib.querySelector('.spinner')) {
         this.chart.dataset.inAjax = false;
-        break;
       }
-      preSib = preSib.previousElementSibling;
     }
-    let nextSib = nodeContainer.nextElementSibling;
-    while (nextSib) {
-      if (nextSib.querySelector('.spinner')) {
-        this.chart.dataset.inAjax = false;
-        break;
-      }
-      nextSib = nextSib.previousElementSibling;
-    }
+    
     if (!direction || (direction && direction === 'left')) {
-      preSib = nodeContainer.previousElementSibling;
-      while (preSib) {
-        for (let node of preSib.querySelectorAll('.node')) {
-          if (window.getComputedStyle(node).opacity !== '0') {
+      let preSibs = this._prevAll(nodeContainer);
+      for (let sib of preSibs) {
+        for (let node of sib.querySelectorAll('.node')) {
+          if (!this._isCollpased(node)) {
             node.classList.add('slide', 'slide-right');
           } 
         }
-        preSib = preSib.previousElementSibling;
       }
     }
     if (!direction || (direction && direction !== 'left')) {
-      $nodeContainer.nextAll().find('.node:visible').addClass('slide slide-left');
-      nextSib = nodeContainer.nextElementSibling;
-      while (nextSib) {
+      let nextSibs = this._nextAll(nodeContainer);
+      for (let sib of nextSibs) {
         for (let node of next.querySelectorAll('.node')) {
-          if (window.getComputedStyle(node).opacity !== '0') {
+          if (!this._isCollpased(node)) {
             node.classList.add('slide', 'slide-left');
           } 
         }
@@ -269,6 +300,7 @@ export default class OrgChart {
       }
     }
     var $animatedNodes = $nodeContainer.siblings().find('.slide');
+    this._siblings(nodeContainer, 'subExpr');
     var $lines = $animatedNodes.closest('.nodes').prevAll('.lines').css('visibility', 'hidden');
     $animatedNodes.eq(0).one('transitionend', function() {
       $lines.removeAttr('style');
