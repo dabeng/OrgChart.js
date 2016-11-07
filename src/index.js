@@ -135,6 +135,16 @@ export default class OrgChart {
       el.classList.remove(className);
     });
   }
+  _css(elements, prop, val) {
+    elements.forEach(function(el) {
+      el.style[prop] = val;
+    });
+  }
+  _removeAttr(elements, attr) {
+    elements.forEach(function(el) {
+      el.removeAttr(attr);
+    });
+  }
   _getJSON(url) {
     return new Promise(function(resolve, reject){
       var client = new XMLHttpRequest();
@@ -377,21 +387,22 @@ export default class OrgChart {
       hideSiblings(node);
     }
     // hide the lines
-    var $lines = $temp.slice(1);
-    $lines.css('visibility', 'hidden');
+    let lines = temp.slice(1);
+    this._css(lines, 'visibility', 'hidden');
     // hide the superior nodes with transition
-    var $parent = $temp.eq(0).find('.node');
-    var grandfatherVisible = getNodeState($parent, 'parent').visible;
-    if ($parent.length && $parent.is(':visible')) {
-      $parent.addClass('slide slide-down').one('transitionend', function() {
-        $parent.removeClass('slide');
-        $lines.removeAttr('style');
-        $temp.addClass('hidden');
-      });
+    let parent = temp[0].querySelector('.node');
+    let grandfatherVisible = getNodeState(parent, 'parent').visible;
+    if (parent && this._isVisible(parent)) {
+      parent.classList.add('slide', 'slide-down')
+      parent.addEventListener('transitionend', function() {
+        parent.classList.remove('slide');
+        this._removeAttr(lines, 'style');
+        this._addClass(temp, 'hidden');
+      }, { 'once': true });
     }
     // if the current node has the parent node, hide it recursively
-    if ($parent.length && grandfatherVisible) {
-      hideAncestorsSiblings($parent);
+    if (parent && grandfatherVisible) {
+      hideAncestorsSiblings(parent);
     }
   }
   // exposed method
