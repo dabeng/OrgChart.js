@@ -122,8 +122,18 @@ export default class OrgChart {
     }
     return sibs;
   }
-  _isCollpased(el) {
-    return window.getComputedStyle(el).opacity === '0';
+  _isVisible(el) {
+    return el.offsetParent !== null;
+  }
+  _addClass(elements, className) {
+    nodeList.forEach(function(el) {
+      el.classList.add(className);
+    });
+  }
+  _removeClass(elements, className) {
+    nodeList.forEach(function(el) {
+      el.classList.remove(className);
+    });
   }
   _getJSON(url) {
     return new Promise(function(resolve, reject){
@@ -250,9 +260,7 @@ export default class OrgChart {
       tr.classList.remove('hidden');
     }
     // just show only one line
-    for (let td of temp[2].children.slice(1, -1)) {
-      td.classList.add('hidden');
-    };
+    this._addClass(temp[2].children.slice(1, -1), 'hidden');
     // show parent node with animation
     let parent = temp[0].querySelector('.node');
     repaint(parent);
@@ -282,7 +290,7 @@ export default class OrgChart {
       let preSibs = this._prevAll(nodeContainer);
       for (let sib of preSibs) {
         for (let node of sib.querySelectorAll('.node')) {
-          if (!this._isCollpased(node)) {
+          if (!this._isVisible(node)) {
             node.classList.add('slide', 'slide-right');
           } 
         }
@@ -292,30 +300,69 @@ export default class OrgChart {
       let nextSibs = this._nextAll(nodeContainer);
       for (let sib of nextSibs) {
         for (let node of next.querySelectorAll('.node')) {
-          if (!this._isCollpased(node)) {
+          if (!this._isVisible(node)) {
             node.classList.add('slide', 'slide-left');
           } 
         }
         nextSib = nextSib.nextElementSibling;
       }
     }
-    var $animatedNodes = $nodeContainer.siblings().find('.slide');
-    this._siblings(nodeContainer, 'subExpr');
-    var $lines = $animatedNodes.closest('.nodes').prevAll('.lines').css('visibility', 'hidden');
-    $animatedNodes.eq(0).one('transitionend', function() {
-      $lines.removeAttr('style');
-      var $siblings = direction ? (direction === 'left' ? $nodeContainer.prevAll(':not(.hidden)') : $nodeContainer.nextAll(':not(.hidden)')) : $nodeContainer.siblings();
-      $nodeContainer.closest('.nodes').prev().children(':not(.hidden)')
-        .slice(1, direction ? $siblings.length * 2 + 1 : -1).addClass('hidden');
-      $animatedNodes.removeClass('slide');
-      $siblings.find('.node:visible:gt(0)').removeClass('slide-left slide-right').addClass('slide-up')
-        .end().find('.lines, .nodes, .verticalNodes').addClass('hidden')
-        .end().addClass('hidden');
 
-      if (isInAction($node)) {
-        switchHorizontalArrow($node);
-      }
+    let animatedNodes = [];
+
+    for (let sib of this._siblings(nodeContainer)) {
+      animatedNodes.concat(sib.querySelectorAll('.slide'));
+    }
+    let lines = [];
+
+    for (let node of animatedNodes) {
+      let temp = this._closest(node, function (el) {
+        return el.classList.contains('nodes');
+      }).parentNode.firstChild;
+      lines.push(temp);
+      lines.push(temp.nextElementSibling);
+    }
+    lines.forEach(function(line) {
+      line.style.visibility = 'hidden';
     });
+
+    animatedNodes[0].addEventListener('transitionend', function() {
+      lines.forEach(function(line) {
+        line.removeAttribute('style');
+      });
+      let sibs = [];
+
+      if (direction) {
+        if (direction === 'left') {
+          sibs = this._prevAll(nodeContainer, ':not(.hidden)');
+        } else {
+          sibs = this._nextAll(nodeContainer, ':not(.hidden)');
+        }
+      } else {
+        sibs = this._siblings(nodeContainer);
+      }
+      let temp = this._closest(nodeContainer, function (el) {
+        return el.classList.contains('nodes');
+      }).previousElementSibling.querySelectorAll(':scope > :not(.hidden)');
+
+      let someLines = temp.slice(1, direction ? sibs.length * 2 + 1 : -1);
+      this._addClass(someLines, 'hidden');
+      this._removeClass(animatedNodes, 'slide');
+      sibs.querySelectorAll('.node').slice(1).forEach(function(node) {
+        if (this._isVisible(node)) {
+          node.classList.remove('slide-left', 'slide-right');
+          node.classList.add('slide-up');
+        }
+      });
+      this._addClass(sibs.querySelectorAll('.lines'), 'hidden');
+      this._addClass(sibs.querySelectorAll('.nodes'), 'hidden');
+      this._addClass(sibs.querySelectorAll('.verticalNodes'), 'hidden');
+      this._addClass(sibs, 'hidden');
+
+      if (isInAction(node)) {
+        switchHorizontalArrow(node);
+      }
+    }, { 'once', true });
   }
   // recursively hide the ancestor node and sibling nodes of the specified node
   hideAncestorsSiblings(node) {
