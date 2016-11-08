@@ -807,7 +807,7 @@ export default class OrgChart {
       nodeDiv.addEventListener('drop', function(event) {
         let dropZone = event.target,
           chart = this.chart,
-          dragged = orgchart.dataSet.dragged,
+          dragged = chart.dataSet.dragged,
           dragZone = this._closest(dragged, function (el) {
             return el.classList.contains('.nodes');
           }).parentNode.children[0].firstChild;
@@ -825,18 +825,23 @@ export default class OrgChart {
             }),
             tr = document.createElement(tr);
 
-            tr.setAttribute('class', 'lines');
-            tr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
-            table.appendChild(tr);
-            tr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
-            table.appendChild(tr);
-            tr.setAttribute('class', 'nodes');
-            tr.innerHTML = ``;
-            table.appendChild(tr);
-
-            .siblings(':last').append($dragged.find('.horizontalEdge').remove().end().closest('table').parent());
+          tr.setAttribute('class', 'lines');
+          tr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
+          table.appendChild(tr);
+          tr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
+          table.appendChild(tr);
+          tr.setAttribute('class', 'nodes');
+          tr.innerHTML = ``;
+          table.appendChild(tr);
+          for (let hEdge of dragged.querySelectorAll('.horizontalEdge')) {
+            dragged.removeChild(hEdge);
+          }
+          let draggedTd = this._closest(dragged, function (el) {
+            return el.nodeName === 'TABLE';
+          }).parentNode;
+          tr.appendChild(draggedTd);
         } else {
-          var dropColspan = parseInt($dropZone.parent().attr('colspan')) + 2;
+          let dropColspan = window.parseInt(dropZone.parentNode.colspan) + 2,
           var horizontalEdges = '<i class="edge horizontalEdge rightEdge fa"></i><i class="edge horizontalEdge leftEdge fa"></i>';
           $dropZone.closest('tr').next().addBack().children().attr('colspan', dropColspan);
           if (!$dragged.find('.horizontalEdge').length) {
@@ -850,9 +855,9 @@ export default class OrgChart {
           }
         }
         // secondly, deal with the hierarchy of dragged node
-        let dragColspan = window.parseInt($dragZone.attr('colspan'));
+        let dragColspan = window.parseInt(dragZone.colspan);
         if (dragColspan > 2) {
-          $dragZone.attr('colspan', dragColspan - 2)
+          dragZone.setAttribute('colspan', dragColspan - 2)
             .parent().next().children().attr('colspan', dragColspan - 2)
             .end().next().children().slice(1, 3).remove();
           var $dragSibs = $dragZone.parent().siblings('.nodes').children().find('.node:first');
@@ -860,9 +865,12 @@ export default class OrgChart {
             $dragSibs.find('.horizontalEdge').remove();
           }
         } else {
-          $dragZone.removeAttr('colspan')
-            .find('.bottomEdge').remove()
-            .end().end().siblings().remove();
+          dragZone.removeAttribute('colspan')
+          dragZone.removeChild(dragZone.querySelector('.bottomEdge'));
+          let redundantTrs = dragZone.parentNode.parentNode.children.slic(1);
+          for (let tr of redundantTrs) {
+            dragged.parentNode.parentNode.removeChild(tr);
+          }
         }
         let customE = new CustomEvent('nodedropped.orgchart', {
           'draggedNode': dragged,
