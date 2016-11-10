@@ -216,7 +216,8 @@ export default class OrgChart {
     let target = [];
 
     if (relation === 'parent') {
-      target.push(this._closest(node, 'nodes').parendNode.children[0].querySelector('.node'));
+      target.push(this._closest(node, (el) => el.classList.contains('nodes'))
+        .parendNode.children[0].querySelector('.node'));
     } else if (relation === 'children') {
       target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').children.lastChild.children)
         .map((el) => el.querySelector('.node'));
@@ -998,11 +999,9 @@ export default class OrgChart {
         }
       }
 
-      nodeDiv.addEventListener('mouseenter', that._hoverNode);
-      nodeDiv.addEventListener('mouseleave', that._hoverNode);
+      nodeDiv.addEventListener('mouseenter', that._hoverNode.bind(that));
+      nodeDiv.addEventListener('mouseleave', that._hoverNode.bind(that));
       nodeDiv.addEventListener('click', that._dispatchClickEvent);
-      nodeDiv.addEventListener('click', that._clickNode);
-
       if (opts.draggable) {
         nodeDiv.addEventListener('dragstart', that._onDragStart);
         nodeDiv.addEventListener('dragover', that._onDragOver);
