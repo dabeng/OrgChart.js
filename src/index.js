@@ -3,6 +3,7 @@ export default class OrgChart {
     chartContainer,
     data,
     nodeTitle = 'name',
+    nodeContent,
     nodeId = 'id',
     toggleSiblingsResp = false,
     depth = 999,
@@ -16,9 +17,11 @@ export default class OrgChart {
     zoom = false
   } = {}) {
     this._name = 'OrgChart';
+    this.data = data;
     this.options = {
       'chartContainer': chartContainer,
       'nodeTitle': nodeTitle,
+      'nodeContent': nodeContent,
       'nodeId': nodeId,
       'toggleSiblingsResp': toggleSiblingsResp,
       'depth': depth,
@@ -40,12 +43,11 @@ export default class OrgChart {
   _init() {
     // build the org-chart
     let opts = this.options,
-      data = opts.data,
+      data = this.data,
       chart = document.createElement('div');
 
     this.chart = chart;
-
-    chart.setAttribute('data-options', opts);
+    chart.dataset.options = opts;
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
     chart.addEventListener('click', function (event) {
@@ -209,7 +211,28 @@ export default class OrgChart {
   _isInAction(node) {
     return node.querySelector(':scope > .edge').className.indexOf('fa-') > -1;
   }
-  hoverNode(event) {
+  // detect the exist/display state of related node
+  getNodeState(node, relation) {
+    let target = [];
+
+    if (relation === 'parent') {
+      target.push(this._closest(node, 'nodes').parendNode.children[0].querySelector('.node'));
+    } else if (relation === 'children') {
+      target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').children.lastChild.children)
+        .map((el) => el.querySelector('.node'));
+    } else {
+      target = this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
+        .map((el) => el.querySelector('.node'));
+    }
+    if (target.length) {
+      if (target.some((el) => this._isVisible(el))) {
+        return { 'exist': true, 'visible': true, 'nodes': target };
+      }
+      return { 'exist': true, 'visible': false, 'nodes': target };
+    }
+    return { 'exist': false, 'visible': false, 'nodes': target };
+  }
+  _hoverNode(event) {
     let node = event.target,
       flag = false,
       topEdge = node.querySelector(':scope > .topEdge'),
@@ -237,12 +260,9 @@ export default class OrgChart {
   }
   // define node click event handler
   _clickNode(event) {
-    let node = event.target,
-      chart = this._closest(node, function (el) {
-        return el.classList.contains('orgchart');
-      });
+    let node = event.target;
 
-    chart.querySelector('.focused').classList.remove('focused');
+    this.chart.querySelector('.focused').classList.remove('focused');
     node.classList.add('focused');
   }
   // build the parent node of specific node
@@ -443,7 +463,7 @@ export default class OrgChart {
     let topEdge = event.target,
       node = topEdge.parentNode,
       parentState = this.getNodeState(node, 'parent'),
-      opts = this.dataset.options;
+      opts = this.chart.dataset.options;
 
     if (parentState.exist) {
       let temp = this._closest(node, function (el) {
@@ -458,7 +478,7 @@ export default class OrgChart {
         parent.addEventListener('transitionend', function () {
           if (this._isInAction(node)) {
             this._switchVerticalArrow(topEdge);
-            tis._switchHorizontalArrow(node);
+            this._switchHorizontalArrow(node);
           }
         }, { 'once': true });
       } else { // show the ancestors and siblings
@@ -466,50 +486,92 @@ export default class OrgChart {
       }
     } else {
       // load the new parent node of the specified node by ajax request
-      var nodeId = topEdge.parentNode.id;
+      let nodeId = topEdge.parentNode.id;
+
       // start up loading status
-      if (startLoading(topEdge, node, opts)) {
+      if (this._startLoading(topEdge, node, opts)) {
         // load new nodes
-        this._getJSON(typeof opts.ajaxURL.parent === 'function' ? opts.ajaxURL.parent(nodeData) : opts.ajaxURL.parent + nodeId)
-        .then(function(resp) {
-          let chart = this._closest(node, function (el) {
-            return el.classList.contains('orgchart');
-          });
-          if (chart.dataset.inAjax) {
+        this._getJSON(typeof opts.ajaxURL.parent === 'function' ?
+          opts.ajaxURL.parent(node.dataset.source) : opts.ajaxURL.parent + nodeId)
+        .then(function (resp) {
+          if (this.chart.dataset.inAjax) {
             if (!Object.keys(resp).length) {
-              this.addParent(node, data, opts);
+              this.addParent(node, resp, opts);
             }
           }
         })
-        .catch(function(err) {
+        .catch(function (err) {
           console.error('Failed to get parent node data.', err);
         })
-        .finally(function() {
+        .finally(function () {
           this._endLoading(topEdge, node, opts);
         });
       }
     }
   }
+  // show the children nodes of the specified node
+  showDescendants(node) {
+    let that = this,
+      temp = this._prevAll(node.parentNode.parentNode),
+      descendants = [];
+
+    this._removeClass(temp, 'hidden');
+    if (temp.some((el) => el.classList.contains('verticalNodes'))) {
+      temp.forEach((el) => {
+        descendants.push([...Array.from(el.querySelectorAll('.node')).filter((el) => {
+          return that._isVisible(el);
+        })]);
+      });
+    } else {
+      Array.from(temp[2].children).forEach((el) => {
+        descendants.push([...Array.from(el.querySelector('tr').querySelectorAll('.node')).filter((el) => {
+          return that._isVisible(el);
+        })]);
+      });
+    }
+    // the two following statements are used to enforce browser to repaint
+    this._repaint(descendants[0]);
+    descendants.forEach((el) => {
+      el.classList.add('slide');
+      el.classList.remove('slide-up');
+    });
+    descendants[0].addEventListener('transitionend', function () {
+      descendants.removeClass('slide');
+      if (that._isInAction(node)) {
+        that._switchVerticalArrow(node.querySelector('.bottomEdge'));
+      }
+    }, { 'once': true });
+  }
   // exposed method
   addChildren(node, data, opts) {
-    var opts = opts || $node.closest('.orgchart').data('options');
-    var count = 0;
-    buildChildNode.call($node.closest('.orgchart').parent(), $node.closest('table'), data, opts, function() {
+    if (!opts) {
+      opts = this.chart.dataset.options;
+    }
+    let count = 0;
+
+    this._buildChildNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, opts, function () {
       if (++count === data.children.length) {
-        if (!$node.children('.bottomEdge').length) {
-          $node.append('<i class="edge verticalEdge bottomEdge fa"></i>');
+        if (!node.querySelector('.bottomEdge')) {
+          let bottomEdge = document.createElement('i');
+
+          bottomEdge.setAttribute('class', 'edge verticalEdge bottomEdge fa');
+          node.appendChild(bottomEdge);
         }
-        if (!$node.find('.symbol').length) {
-          $node.children('.title').prepend('<i class="fa '+ opts.parentNodeSymbol + ' symbol"></i>');
+        if (!node.querySelector('.symbol')) {
+          let symbol = document.createElement('i');
+
+          symbol.setAttribute('class', 'fa ' + opts.parentNodeSymbol + ' symbol');
+          node.querySelector(':scope > .title').appendChild(symbol);
         }
-        showDescendants($node);
+        this.showDescendants(node);
       }
     });
   }
   // bind click event handler for the bottom edge
   _clickBottomEdge(event) {
     event.stopPropagation();
-    let bottomEdge = event.target,
+    let opts = this.chart.dataset.options,
+      bottomEdge = event.target,
       node = bottomEdge.parentNode,
       childrenState = this.getNodeState(node, 'children');
 
@@ -518,7 +580,9 @@ export default class OrgChart {
         return el.nodeName === 'TR';
       }).parentNode.children[3];
 
-      if (temp.fquerySelectorAll('.node').some((node) => this._isVisible(node) && node.classList.contains('slide'))) { return; }
+      if (temp.fquerySelectorAll('.node').some((node) => {
+        return this._isVisible(node) && node.classList.contains('slide');
+      })) { return; }
       // hide the descendant nodes of the specified node
       if (childrenState.visible) {
         this.hideDescendants(node);
@@ -527,20 +591,21 @@ export default class OrgChart {
       }
     } else { // load the new children nodes of the specified node by ajax request
       let nodeId = bottomEdge.parentNode.id;
- 
+
       if (this._startLoading(bottomEdge, node, opts)) {
-        this._getJSON(typeof opts.ajaxURL.children === 'function' ? opts.ajaxURL.children(nodeData) : opts.ajaxURL.children + nodeId)
-        .then(function(resp) {
-          if (this.chart.dataSet.inAjax) {
+        this._getJSON(typeof opts.ajaxURL.children === 'function' ?
+          opts.ajaxURL.children(node.dataset.source) : opts.ajaxURL.children + nodeId)
+        .then(function (resp) {
+          if (this.chart.dataset.inAjax) {
             if (resp.children.length) {
               this.addChildren(node, resp, Object.assign({}, opts, { depth: 0 }));
             }
           }
         })
-        .catch(function(err) {
+        .catch(function (err) {
           console.error('Failed to get children nodes data', err);
         })
-        .finally(function() {
+        .finally(function () {
           this._endLoading(bottomEdge, node, opts);
         });
       }
@@ -549,71 +614,74 @@ export default class OrgChart {
   // bind click event handler for the left and right edges
   _clickHorizontalEdge(event) {
     event.stopPropagation();
-    let hEdge = event.target,
+    let opts = this.chart.dataset.options,
+      hEdge = event.target,
       node = hEdge.parentNode,
       siblingsState = this.getNodeState(node, 'siblings');
-      if (siblingsState.exist) {
-        let temp = this._closest(node, function (el) {
-            return el.nodeName === 'TABLE';
-          }).parentNode,
-          siblings = this._siblings(temp);
 
-        if (siblings.querySelectorAll('.node').some((node) => this._isVisible(node) && node.classList.contains('slide'))) { return; }
-        if (opts.toggleSiblingsResp) {
-          let prevSib = this._closest(node, function (el) {
-              return el.nodeName === 'TABLE';
-            }).parentNode.previousElementSibling,
-            nextSib = this._closest(node, function (el) {
-              return el.nodeName === 'TABLE';
-            }).parentNode.nextElementSibling;
-          if (hEdge.classList.contains('.leftEdge')) {
-            if (prevSib.classList.contains('.hidden')) {
-              this.showSiblings(node, 'left');
-            } else {
-              this.hideSiblings(node, 'left');
-            }
+    if (siblingsState.exist) {
+      let temp = this._closest(node, function (el) {
+          return el.nodeName === 'TABLE';
+        }).parentNode,
+        siblings = this._siblings(temp);
+
+      if (siblings.querySelectorAll('.node').some((node) => {
+        return this._isVisible(node) && node.classList.contains('slide');
+      })) { return; }
+      if (opts.toggleSiblingsResp) {
+        let prevSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.previousElementSibling,
+          nextSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.nextElementSibling;
+
+        if (hEdge.classList.contains('.leftEdge')) {
+          if (prevSib.classList.contains('.hidden')) {
+            this.showSiblings(node, 'left');
           } else {
-            if (nextSib.classList.contains('.hidden')) {
-              this.showSiblings(node, 'right');
-            } else {
-              this.hideSiblings(node, 'right');
-            }
+            this.hideSiblings(node, 'left');
           }
         } else {
-          if (siblingsState.visible) {
-            this.hideSiblings(node);
+          if (nextSib.classList.contains('.hidden')) {
+            this.showSiblings(node, 'right');
           } else {
-            this.showSiblings(node);
+            this.hideSiblings(node, 'right');
           }
         }
       } else {
-        // load the new sibling nodes of the specified node by ajax request
-        let nodeId = hEdge.parentNode.id,
-          url = (this.getNodeState(node, 'parent').exist) ?
-            (typeof opts.ajaxURL.siblings === 'function' ? opts.ajaxURL.siblings(nodeData) : opts.ajaxURL.siblings + nodeId) :
-            (typeof opts.ajaxURL.families === 'function' ? opts.ajaxURL.families(nodeData) : opts.ajaxURL.families + nodeId);
-
-        if (this._startLoading(hEdge, node, opts)) {
-          this._getJSON(url)
-          .then(function(resp) {
-            if (this.chart.dataSet.inAjax) {
-              if (resp.siblings || resp.children) {
-                this.addSiblings(node, resp, opts);
-              }
-            }
-          })
-          .catch(function(err) {
-            console.err('Failed to get sibling nodes data', err);
-          })
-          .finally(function() {
-            this._endLoading(hEdge, node, opts);
-          });
+        if (siblingsState.visible) {
+          this.hideSiblings(node);
+        } else {
+          this.showSiblings(node);
         }
       }
+    } else {
+      // load the new sibling nodes of the specified node by ajax request
+      let nodeId = hEdge.parentNode.id,
+        url = (this.getNodeState(node, 'parent').exist) ?
+          (typeof opts.ajaxURL.siblings === 'function' ?
+            opts.ajaxURL.siblings(node.dataset.source) : opts.ajaxURL.siblings + nodeId) :
+          (typeof opts.ajaxURL.families === 'function' ?
+            opts.ajaxURL.families(node.dataset.source) : opts.ajaxURL.families + nodeId);
+
+      if (this._startLoading(hEdge, node, opts)) {
+        this._getJSON(url)
+        .then(function (resp) {
+          if (this.chart.dataset.inAjax) {
+            if (resp.siblings || resp.children) {
+              this.addSiblings(node, resp, opts);
+            }
+          }
+        })
+        .catch(function (err) {
+          console.err('Failed to get sibling nodes data', err);
+        })
+        .finally(function () {
+          this._endLoading(hEdge, node, opts);
+        });
+      }
+    }
   }
   // event handler for toggle buttons in Hybrid(horizontal + vertical) OrgChart
-  _clickToggleButton (event) {
-    let that = this, 
+  _clickToggleButton(event) {
+    let that = this,
       toggleBtn = event.target,
       descWrapper = toggleBtn.parentNode.nextElementSibling,
       descendants = descWrapper.querySelectorAll('.node'),
@@ -629,271 +697,332 @@ export default class OrgChart {
       this._repaint(children[0]);
       this._addClass(children, 'slide');
       this._removeClass(children, 'slide-up');
-      children[0].addEventListener('transitionend', function() {
+      children[0].addEventListener('transitionend', function () {
         that._removeClass(children, 'slide');
       }, { 'once': true });
     } else {
       this._addClass(descendants, 'slide slide-up');
-      descendants[0].addEventListener('transitionend', function() {
+      descendants[0].addEventListener('transitionend', function () {
         that._removeClass(descendants, 'slide');
         let ul = this._closest(descendants[0], function (el) {
           return el.nodeName === 'ul';
         });
 
         ul.classList.add('hidden');
-      }, { 'once': true })
+      }, { 'once': true });
       let subToggleBtn = descendants[0].querySelector('.toggleBtn').classList.remove('fa-minus-square');
 
       subToggleBtn.classList.add('fa-plus-square');
     }
   }
+  _dispatchClickEvent(event) {
+    let classList = event.target.classList;
+
+    if (classList.contains('.topEdge')) {
+      this._clickNode(event);
+    } else if (classList.contains('.rightEdge') || classList.contains('.leftEdge')) {
+      this._clickHorizontalEdge(event);
+    } else if (classList.contains('.bottomEdge')) {
+      this._clickBottomEdge(event);
+    } else if (classList.contains('.toggleBtn')) {
+      this._clickToggleButton(event);
+    } else {
+      this._clickNode(event);
+    }
+  }
+  _onDragStart(event) {
+    let nodeDiv = event.target,
+      opts = this.chart.dataset.options,
+      isFirefox = /firefox/.test(window.navigator.userAgent.toLowerCase());
+
+    if (isFirefox) {
+      event.dataTransfer.setData('text/html', 'hack for firefox');
+    }
+    // if users enable zoom or direction options
+    if (this.chart.style.transform !== 'none') {
+      let ghostNode, nodeCover;
+
+      if (!document.querySelector('.ghost-node')) {
+        ghostNode = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        ghostNode.classList.add('ghost-node');
+        nodeCover = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+        ghostNode.appendChild(nodeCover);
+        this.chart.appendChild(ghostNode);
+      } else {
+        ghostNode = this.chart.querySelector(':scope > .ghost-node');
+        nodeCover = ghostNode.children[0];
+      }
+      let transValues = this.chart.style.transform.split(','),
+        scale = Math.abs(window.parseFloat((opts.direction === 't2b' || opts.direction === 'b2t') ?
+          transValues[0].slice(transValues[0].indexOf('(') + 1) : transValues[1]));
+
+      ghostNode.setAttribute('width', nodeDiv.offsetWidth);
+      ghostNode.setAttribute('height', nodeDiv.offsetHeight);
+      nodeCover.setAttribute('x', 5 * scale);
+      nodeCover.setAttribute('y', 5 * scale);
+      nodeCover.setAttribute('width', 120 * scale);
+      nodeCover.setAttribute('height', 40 * scale);
+      nodeCover.setAttribute('rx', 4 * scale);
+      nodeCover.setAttribute('ry', 4 * scale);
+      nodeCover.setAttribute('stroke-width', 1 * scale);
+      let xOffset = event.offsetX * scale,
+        yOffset = event.offsetY * scale;
+
+      if (opts.direction === 'l2r') {
+        xOffset = event.offsetY * scale;
+        yOffset = event.offsetX * scale;
+      } else if (opts.direction === 'r2l') {
+        xOffset = nodeDiv.offsetWidth - event.offsetY * scale;
+        yOffset = event.offsetX * scale;
+      } else if (opts.direction === 'b2t') {
+        xOffset = nodeDiv.offsetWidth - event.offsetX * scale;
+        yOffset = nodeDiv.offsetHeight - event.offsetY * scale;
+      }
+      if (isFirefox) { // hack for old version of Firefox(< 48.0)
+        let ghostNodeWrapper = document.createElement('img');
+
+        ghostNodeWrapper.src = 'data:image/svg+xml;utf8,' + (new XMLSerializer()).serializeToString(ghostNode);
+        event.dataTransfer.setDragImage(ghostNodeWrapper, xOffset, yOffset);
+        nodeCover.setAttribute('fill', 'rgb(255, 255, 255)');
+        nodeCover.setAttribute('stroke', 'rgb(191, 0, 0)');
+      } else {
+        event.dataTransfer.setDragImage(ghostNode, xOffset, yOffset);
+      }
+    }
+    let dragged = event.target,
+      dragZone = this._closest(dragged, (el) => {
+        return el.classList.contains('.nodes');
+      }).parentNode.children[0].querySelector('.node'),
+      dragHier = this._closest(dragged, (el) => {
+        return el.nodeName === 'TABLE';
+      }).querySelectorAll('.node');
+
+    this.chart.dataset.dragged = dragged;
+    Array.from(this.chart.querySelectorAll('.node')).forEach(function (node) {
+      if (dragHier.index(node) === -1) {
+        if (opts.dropCriteria) {
+          if (opts.dropCriteria(dragged, dragZone, node)) {
+            node.classList.add('allowedDrop');
+          }
+        } else {
+          node.classList.add('allowedDrop');
+        }
+      }
+    });
+  }
+  _onDragOver(event) {
+    event.preventDefault();
+    let opts = this.chart.dataset.options,
+      dropZone = event.target,
+      dragged = this.chart.dataset.dragged,
+      dragZone = this._closest(dragged, function (el) {
+        return el.classList.contains('.nodes');
+      }).parentNode.children[0].querySelector('.node');
+
+    if (Array.from(this._closest(dragged, (el) => el.nodeName === 'TABLE').querySelectorAll('.node'))
+      .includes(dropZone) || (opts.dropCriteria && !opts.dropCriteria(dragged, dragZone, dropZone))) {
+      event.dataTransfer.dropEffect = 'none';
+    }
+  }
+  _onDragEnd(event) {
+    Array.from(this.chart.querySelectorAll('.allowedDrop')).forEach(function (el) {
+      el.classList.remove('allowedDrop');
+    });
+  }
+  _onDrop(event) {
+    let dropZone = event.target,
+      chart = this.chart,
+      dragged = chart.dataset.dragged,
+      dragZone = this._closest(dragged, function (el) {
+        return el.classList.contains('.nodes');
+      }).parentNode.children[0].firstChild;
+
+    this._removeClass(chart.querySelectorAll('.allowedDrop'), 'allowedDrop');
+    // firstly, deal with the hierarchy of drop zone
+    if (!dropZone.parentNode.parentNode.nextElementSibling) { // if the drop zone is a leaf node
+      let bottomEdge = document.createElement('i');
+
+      bottomEdge.setAttribute('class', 'edge verticalEdge bottomEdge fa');
+      dropZone.appendChild(bottomEdge);
+      dropZone.parentNode.setAttribute('colspan', 2);
+      let table = this._closest(dropZone, function (el) {
+          return el.nodeName === 'TABLE';
+        }),
+        tr = document.createElement(tr);
+
+      tr.setAttribute('class', 'lines');
+      tr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
+      table.appendChild(tr);
+      tr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
+      table.appendChild(tr);
+      tr.setAttribute('class', 'nodes');
+      tr.innerHTML = ``;
+      table.appendChild(tr);
+      for (let hEdge of dragged.querySelectorAll('.horizontalEdge')) {
+        dragged.removeChild(hEdge);
+      }
+      let draggedTd = this._closest(dragged, (el) => el.nodeName === 'TABLE').parentNode;
+
+      tr.appendChild(draggedTd);
+    } else {
+      let dropColspan = window.parseInt(dropZone.parentNode.colspan) + 2,
+        hEdge = document.createElement('i');
+
+      dropZone.parentNode.setAttribute('colspan', dropColspan);
+      dropZone.parentNode.parentNode.nextElementSibling.firstChild.setAttribute('colspan', dropColspan);
+      if (!dragged.find('.horizontalEdge').length) {
+        hEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+        dragged.appendChild(hEdge);
+        hEdge.classList.remove('rightEdge');
+        hEdge.classList.add('leftEdge');
+        dragged.appendChild(hEdge);
+      }
+      let temp = dropZone.parentNode.parentNode.nextElementSibling.nextElementSibling,
+        line = document.createElement('td');
+
+      line.setAttribute('class', 'leftLine topLine');
+      line.innerHTML = `&nbsp;`;
+      temp.insertBefore(line, temp.lastChild);
+      line.classList.remove('leftLine');
+      line.classList.add('rightLine');
+      temp.insertBefore(line, temp.lastChild);
+      temp.nextElementSibling.appendChild(this._closest(dragged, function (el) {
+        return el.nodeName === 'TABLE';
+      }).parentNode);
+
+      let dropSibs = this._closest(dragged, function (el) {
+        return el.classList.contains('nodes');
+      }).children;
+
+      if (dropSibs.length === 1) {
+        dropSibs[0].firstChild.appendChild(hEdge);
+        hEdge.classList.remove('leftEdge');
+        hEdge.classList.add('rightEdge');
+        dropSibs[0].firstChild.appendChild(hEdge);
+      }
+    }
+    // secondly, deal with the hierarchy of dragged node
+    let dragColspan = window.parseInt(dragZone.colspan);
+
+    if (dragColspan > 2) {
+      dragZone.setAttribute('colspan', dragColspan - 2);
+      dragZone.parentNode.nextElementSibling.firstChild.setAttribute('colspan', dragColspan - 2);
+      let temp = dragZone.parentNode.nextElementSibling.nextElementSibling;
+
+      temp.removeChild(temp.children[1]);
+      temp.removeChild(temp.children[2]);
+
+      let dragSibs = Array.from(dragZone.parentNode.parentNode.children[3].children).map(function (td) {
+        return td.querySelector('.node');
+      });
+
+      if (dragSibs.length === 1) {
+        dragSibs[0].removeChild(dragSibs[0].querySelector('.horizontalEdge'));
+      }
+    } else {
+      dragZone.removeAttribute('colspan');
+      dragZone.removeChild(dragZone.querySelector('.bottomEdge'));
+      Array.from(dragZone.parentNode.parentNode.children).slice(1)
+        .forEach((tr) => dragged.parentNode.parentNode.removeChild(tr));
+    }
+    let customE = new CustomEvent('nodedropped.orgchart', {
+      'draggedNode': dragged,
+      'dragZone': dragZone.children,
+      'dropZone': dropZone
+    });
+
+    chart.dispatchEvent(customE);
+  }
   // create node
   _createNode(nodeData, level, opts) {
+    let that = this;
+
     return new Promise(function (resolve, reject) {
-      for (let child of nodeData.chilren) {
+      for (let child of nodeData.children) {
         child.parentId = nodeData.id;
       }
 
-    // construct the content of node
-    let nodeDiv = document.createElement('div');
-    if (nodeData[opts.nodeId]) {
-      nodeDiv.id = nodeData[opts.nodeId];
-    }
-    nodeData.setAttribute('class', 'node ' + (nodeData.className || '') +  (level >= opts.depth ? ' slide-up' : ''));
-    if (opts.draggable) {
-      nodeDiv.setAttribute('draggable', true);
-    }
-    if (nodeData.parentId) {
-      nodeDiv.setAttribute('data-parent', nodeData.parentId);
-    }
-    nodeDiv.innerHTML = `
-      <div class="title">${nodeData[opts.nodeTitle]}</div>
-      ${opts.nodeContent ? `<div class="content">${nodeData[opts.nodeContent]}</div>` : ''}
-    `;
-    // append 4 direction arrows or expand/collapse buttons
-    let flags = nodeData.relationship || '';
+      // construct the content of node
+      let nodeDiv = document.createElement('div');
 
-    if (opts.verticalDepth && (level + 2) > opts.verticalDepth) {
-      if ((level + 1) >= opts.verticalDepth && Number(flags.substr(2,1))) {
-        let toggleBtn = document.createElement('i');
-        toggleBtn.setAttribute('class', 'toggleBtn fa fa-minus-square');
-        nodeDiv.appendChild(toggleBtn);
+      nodeDiv.dataset.source = nodeData;
+      if (nodeData[opts.nodeId]) {
+        nodeDiv.id = nodeData[opts.nodeId];
       }
-    } else {
-      if (Number(flags.substr(0,1))) {
-        let topEdge = document.createElement('i');
-        topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
-        $nodeDiv.appendChild(topEdge);
+      nodeDiv.setAttribute('class', 'node ' + (nodeData.className || '') + (level >= opts.depth ? ' slide-up' : ''));
+      if (opts.draggable) {
+        nodeDiv.setAttribute('draggable', true);
       }
-      if(Number(flags.substr(1,1))) {
-        let rightEdge = document.createElement('i');
-        rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
-        nodeDiv.appendChild(rightEdge);
-        let leftEdge = document.createElement('i');
-        rightEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
-        nodeDiv.appendChild(leftEdge);
+      if (nodeData.parentId) {
+        nodeDiv.setAttribute('data-parent', nodeData.parentId);
       }
-      if(Number(flags.substr(2,1))) {
-        let bottomEdge = document.createElement('i');
-        bottomEdge.setAttribute('class', 'edge verticalEdge bottomEdge fa');
-        nodeDiv.appendChild(bottomEdge);
-        let symbol = document.createElement('i');
-        symbol.setAttribute('class', 'fa '+ opts.parentNodeSymbol + ' symbol');
-        let title = nodeDiv.querySelector('.scope > .title');
-        title.insertBefore(symbol, title.children[0]);
-      }
-    }
+      nodeDiv.innerHTML = `
+        <div class="title">${nodeData[opts.nodeTitle]}</div>
+        ${opts.nodeContent ? `<div class="content">${nodeData[opts.nodeContent]}</div>` : ''}
+      `;
+      // append 4 direction arrows or expand/collapse buttons
+      let flags = nodeData.relationship || '';
 
-      nodeDiv.addEventListener('mouseenter', this._hoverNode);
-      nodeDiv.addEventListener('mouseleave', this._hoverNode);
-      nodeDiv.addEventListener('click', this._clickNode);
-      nodeDiv.querySelector('.topEdge').addEventListener('click', this._clickTopEdge);
-      nodeDiv.querySelector('.bottomEdge').addEventListener('click', this._clickBottomEdge);
-      nodeDiv.querySelector('.toggleBtn').addEventListener('click', this._clickToggleButton);
-      nodeDiv.querySelector('.leftEdge').addEventListener('click', this._clickHorizontalEdge);
-      nodeDiv.querySelector('.rightEdge').addEventListener('click', this._clickHorizontalEdge);
+      if (opts.verticalDepth && (level + 2) > opts.verticalDepth) {
+        if ((level + 1) >= opts.verticalDepth && Number(flags.substr(2, 1))) {
+          let toggleBtn = document.createElement('i');
 
-    if (opts.draggable) {
-      nodeDiv.addEventListener('dragstart', function (event) {
-        let isFirefox = /firefox/.test(window.navigator.userAgent.toLowerCase());
-        if (isFirefox) {
-          event.dataTransfer.setData('text/html', 'hack for firefox');
+          toggleBtn.setAttribute('class', 'toggleBtn fa fa-minus-square');
+          nodeDiv.appendChild(toggleBtn);
         }
-        // if users enable zoom or direction options
-        if (this.chart.style.transform !== 'none') {
-          let ghostNode, nodeCover;
+      } else {
+        if (Number(flags.substr(0, 1))) {
+          let topEdge = document.createElement('i');
 
-          if (!document.querySelector('.ghost-node')) {
-            ghostNode = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-            ghostNode.classList.add('ghost-node');
-            nodeCover = document.createElementNS('http://www.w3.org/2000/svg','rect');
-            ghostNode.appendChild(nodeCover);
-            this.chart.appendChild(ghostNode);
-          } else {
-            ghostNode = this.chart.querySelector(':scope > .ghost-node');
-            nodeCover = ghostNode.children[0];
-          }
-          let transValues = this.chart.style.transform.split(','),
-            scale = Math.abs(window.parseFloat((opts.direction === 't2b' || opts.direction === 'b2t') ? transValues[0].slice(transValues[0].indexOf('(') + 1) : transValues[1]));
-          ghostNode.setAttribute('width', nodeDiv.offsetWidth);
-          ghostNode.setAttribute('height', nodeDiv.offsetHeight);
-          nodeCover.setAttribute('x',5 * scale);
-          nodeCover.setAttribute('y',5 * scale);
-          nodeCover.setAttribute('width', 120 * scale);
-          nodeCover.setAttribute('height', 40 * scale);
-          nodeCover.setAttribute('rx', 4 * scale);
-          nodeCover.setAttribute('ry', 4 * scale);
-          nodeCover.setAttribute('stroke-width', 1 * scale);
-          var xOffset = event.offsetX * scale;
-          var yOffset = event.offsetY * scale;
-          if (opts.direction === 'l2r') {
-            xOffset = event.offsetY * scale;
-            yOffset = event.offsetX * scale;
-          } else if (opts.direction === 'r2l') {
-            xOffset = nodeDiv.offsetWidth - event.offsetY * scale;
-            yOffset = event.offsetX * scale;
-          } else if (opts.direction === 'b2t') {
-            xOffset = nodeDiv.offsetWidth - event.offsetX * scale;
-            yOffset = nodeDiv.offsetHeight - event.offsetY * scale;
-          }
-          if (isFirefox) { // hack for old version of Firefox(< 48.0)
-            nodeCover.setAttribute('fill', 'rgb(255, 255, 255)');
-            nodeCover.setAttribute('stroke', 'rgb(191, 0, 0)');
-            let ghostNodeWrapper = document.createElement('img');
-
-            ghostNodeWrapper.src = 'data:image/svg+xml;utf8,' + (new XMLSerializer()).serializeToString(ghostNode);
-            event.dataTransfer.setDragImage(ghostNodeWrapper, xOffset, yOffset);
-          } else {
-            event.dataTransfer.setDragImage(ghostNode, xOffset, yOffset);
-          }
+          topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
+          nodeDiv.appendChild(topEdge);
         }
-        let dragged = event.target,
-          dragZone = this._closest(dragged, function (el) {
-            return el.classList.contains('.nodes');
-          }).parentNode.children[0].querySelector('.node'),
-          dragHier = this._closest(dragged, function (el) {
-            return el.nodeName === 'TABLE';
-          }).querySelectorAll('.node');
+        if (Number(flags.substr(1, 1))) {
+          let rightEdge = document.createElement('i'),
+            leftEdge = document.createElement('i');
 
-        this.chart.dataSet.dragged = dragged;
-        this.chart.querySelectorAll('.node').forEach(function(node) {
-            if (dragHier.index(node) === -1) {
-              if (opts.dropCriteria) {
-                if (opts.dropCriteria(dragged, dragZone, node)) {
-                  node.classList.add('allowedDrop');
-                }
-              } else {
-                node.classList.add('allowedDrop');
-              }
-            }
-          });
-      });
-      nodeDiv.addEventListener('dragover', function (event) {
-        event.preventDefault();
-        let dropZone = event.target,
-          dragged = this.chart.dataSet.dragged,
-          dragZone = this._closest(dragged, function (el) {
-            return el.classList.contains('.nodes');
-          }).parentNode.children[0].querySelector('.node');
-
-        if ($dragged.closest('table').find('.node').index($dropZone) > -1 ||
-          (opts.dropCriteria && !opts.dropCriteria($dragged, $dragZone, $dropZone))) {
-          event.originalEvent.dataTransfer.dropEffect = 'none';
+          rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+          nodeDiv.appendChild(rightEdge);
+          leftEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
+          nodeDiv.appendChild(leftEdge);
         }
-      });
-      nodeDiv.addEventListener('dragend', function(event) {
-        $(this).closest('.orgchart').find('.allowedDrop').removeClass('allowedDrop');
-      })
-      nodeDiv.addEventListener('drop', function(event) {
-        let dropZone = event.target,
-          chart = this.chart,
-          dragged = chart.dataSet.dragged,
-          dragZone = this._closest(dragged, function (el) {
-            return el.classList.contains('.nodes');
-          }).parentNode.children[0].firstChild;
-
-        this._removeClass(chart.querySelectorAll('.allowedDrop'), 'allowedDrop');
-        // firstly, deal with the hierarchy of drop zone
-        if (!dropZone.parentNode.parentNode.nextElementSibling) { // if the drop zone is a leaf node
-          let bottomEdge = document.createElement('i');
+        if (Number(flags.substr(2, 1))) {
+          let bottomEdge = document.createElement('i'),
+            symbol = document.createElement('i'),
+            title = nodeDiv.querySelector(':scope > .title');
 
           bottomEdge.setAttribute('class', 'edge verticalEdge bottomEdge fa');
-          dropZone.appendChild(bottomEdge);
-          dropZone.parentNode.setAttribute('colspan', 2);
-          let table = this._closest(dropZone, function (el) {
-              return el.nodeName === 'TABLE';
-            }),
-            tr = document.createElement(tr);
+          nodeDiv.appendChild(bottomEdge);
+          symbol.setAttribute('class', 'fa ' + opts.parentNodeSymbol + ' symbol');
+          title.insertBefore(symbol, title.children[0]);
+        }
+      }
 
-          tr.setAttribute('class', 'lines');
-          tr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
-          table.appendChild(tr);
-          tr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
-          table.appendChild(tr);
-          tr.setAttribute('class', 'nodes');
-          tr.innerHTML = ``;
-          table.appendChild(tr);
-          for (let hEdge of dragged.querySelectorAll('.horizontalEdge')) {
-            dragged.removeChild(hEdge);
-          }
-          let draggedTd = this._closest(dragged, function (el) {
-            return el.nodeName === 'TABLE';
-          }).parentNode;
-          tr.appendChild(draggedTd);
-        } else {
-          let dropColspan = window.parseInt(dropZone.parentNode.colspan) + 2,
-          var horizontalEdges = '<i class="edge horizontalEdge rightEdge fa"></i><i class="edge horizontalEdge leftEdge fa"></i>';
-          $dropZone.closest('tr').next().addBack().children().attr('colspan', dropColspan);
-          if (!$dragged.find('.horizontalEdge').length) {
-            $dragged.append(horizontalEdges);
-          }
-          $dropZone.closest('tr').siblings().eq(1).children(':last').before('<td class="leftLine topLine">&nbsp;</td><td class="rightLine topLine">&nbsp;</td>')
-            .end().next().append($dragged.closest('table').parent());
-          var $dropSibs = $dragged.closest('table').parent().siblings().find('.node:first');
-          if ($dropSibs.length === 1) {
-            $dropSibs.append(horizontalEdges);
-          }
-        }
-        // secondly, deal with the hierarchy of dragged node
-        let dragColspan = window.parseInt(dragZone.colspan);
-        if (dragColspan > 2) {
-          dragZone.setAttribute('colspan', dragColspan - 2)
-            .parent().next().children().attr('colspan', dragColspan - 2)
-            .end().next().children().slice(1, 3).remove();
-          var $dragSibs = $dragZone.parent().siblings('.nodes').children().find('.node:first');
-          if ($dragSibs.length ===1) {
-            $dragSibs.find('.horizontalEdge').remove();
-          }
-        } else {
-          dragZone.removeAttribute('colspan')
-          dragZone.removeChild(dragZone.querySelector('.bottomEdge'));
-          let redundantTrs = dragZone.parentNode.parentNode.children.slic(1);
-          for (let tr of redundantTrs) {
-            dragged.parentNode.parentNode.removeChild(tr);
-          }
-        }
-        let customE = new CustomEvent('nodedropped.orgchart', {
-          'draggedNode': dragged,
-          'dragZone': dragZone.children,
-          'dropZone': dropZone
-        });
-        chart.dispatchEvent(customE);
-      });
-    }
-    // allow user to append dom modification after finishing node create of orgchart 
-    if (opts.createNode) {
-      opts.createNode(nodeDiv, nodeData);
-    }
+      nodeDiv.addEventListener('mouseenter', that._hoverNode);
+      nodeDiv.addEventListener('mouseleave', that._hoverNode);
+      nodeDiv.addEventListener('click', that._dispatchClickEvent);
+      nodeDiv.addEventListener('click', that._clickNode);
+
+      if (opts.draggable) {
+        nodeDiv.addEventListener('dragstart', that._onDragStart);
+        nodeDiv.addEventListener('dragover', that._onDragOver);
+        nodeDiv.addEventListener('dragend', that._onDragEnd);
+        nodeDiv.addEventListener('drop', that._onDrop);
+      }
+      // allow user to append dom modification after finishing node create of orgchart
+      if (opts.createNode) {
+        opts.createNode(nodeDiv, nodeData);
+      }
 
       resolve(nodeDiv);
     });
   }
   buildHierarchy(appendTo, nodeData, level, opts, callback) {
     // Construct the node
-    let nodeWrapper,
+    let that = this,
+      nodeWrapper,
       childNodes = nodeData.children,
-      hasChildren = childNodes ? childNodes.length : false,
-      isVerticalNode = (opts.verticalDepth && (level + 1) >= opts.verticalDepth) ? true : false;
+      isVerticalNode = opts.verticalDepth && (level + 1) >= opts.verticalDepth;
 
     if (Object.keys(nodeData).length > 1) { // if nodeData has nested structure
       nodeWrapper = isVerticalNode ? appendTo : document.createElement('table');
@@ -901,90 +1030,90 @@ export default class OrgChart {
         appendTo.appendChild(nodeWrapper);
       }
       this._createNode(nodeData, level, opts)
-      .then(function(nodeDiv) {
+      .then(function (nodeDiv) {
         if (isVerticalNode) {
           nodeWrapper.appendChild(nodeDiv);
         }else {
           let tr = document.createElement('tr');
+
           tr.innerHTML = `
-            <td ${hasChildren ? `colspan="${childNodes.length * 2}"` : ''}>
+            <td ${childNodes ? `colspan="${childNodes.length * 2}"` : ''}>
             </td>
           `;
-          tr.firstChild.appendChild(nodeDiv);
+          tr.children[0].appendChild(nodeDiv);
           nodeWrapper.appendChild(tr);
         }
         if (callback) {
           callback();
         }
+        // Construct the inferior nodes and connectiong lines
+        if (childNodes) {
+          if (Object.keys(nodeData).length === 1) { // if nodeData is just an array
+            nodeWrapper = appendTo;
+          }
+          let isHidden = level + 1 >= opts.depth ? ' hidden' : '',
+            isVerticalLayer = opts.verticalDepth && (level + 2) >= opts.verticalDepth;
+
+          // draw the line close to parent node
+          if (!isVerticalLayer) {
+            let tr = document.createElement('tr');
+
+            tr.setAttribute('class', 'lines' + isHidden);
+            tr.innerHTML = `
+              <td colspan="${ childNodes.length * 2 }">
+                <div class="downLine"></div>
+              </td>
+            `;
+            nodeWrapper.appendChild(tr);
+          }
+          // draw the lines close to children nodes
+          let lineLayer = document.createElement('tr');
+
+          lineLayer.setAttribute('class', 'lines' + isHidden);
+          lineLayer.innerHTML = `
+            <td class="rightLine">&nbsp;</td>
+            ${childNodes.map(() => `
+              <td class="leftLine topLine">&nbsp;</td>
+              <td class="rightLine topLine">&nbsp;</td>
+              `).join('')}
+            <td class="leftLine">&nbsp;</td>
+          `;
+          let nodeLayer;
+
+          if (isVerticalLayer) {
+            nodeLayer = document.createElement('<ul>');
+            if (level + 2 === opts.verticalDepth) {
+              let tr = document.createElement('tr');
+
+              tr.setAttribute('class', 'verticalNodes');
+              tr.innerHTML = `<td></td>`;
+              tr.firstChild.appendChild(nodeLayer);
+            } else {
+              nodeWrapper.appendChild(nodeLayer);
+            }
+          } else {
+            nodeLayer = document.createElement('tr');
+            nodeLayer.setAttribute('class', 'nodes' + isHidden);
+            nodeWrapper.appendChild(lineLayer);
+            nodeWrapper.appendChild(nodeLayer);
+          }
+          // recurse through children nodes
+          childNodes.forEach((child) => {
+            let nodeCell;
+
+            if (isVerticalLayer) {
+              nodeCell = document.createElement('li');
+            } else {
+              nodeCell = document.createElement('td');
+              nodeCell.setAttribute('colspan', 2);
+            }
+            nodeLayer.appendChild(nodeCell);
+            that.buildHierarchy(nodeCell, child, level + 1, opts, callback);
+          });
+        }
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.error('Failed to creat node', err);
-      });
-    }
-    // Construct the inferior nodes and connectiong lines
-    if (hasChildren) {
-      if (Object.keys(nodeData).length === 1) { // if nodeData is just an array
-        $nodeWrapper = $appendTo;
-      }
-      let isHidden = level + 1 >= opts.depth ? ' hidden' : '',
-        isVerticalLayer = (opts.verticalDepth && (level + 2) >= opts.verticalDepth) ? true : false;
-
-      // draw the line close to parent node
-      if (!isVerticalLayer) {
-        let tr = document.createElement('tr');
-        tr.setAttribute('class', 'lines' + isHidden);
-        tr.innerHTML = `
-          <td colspan="${childNodes.length * 2}">
-            <div class="downLine"></div>
-          </td>
-        `;
-        nodeWrapper.appendChild(tr);
-      }
-      // draw the lines close to children nodes
-      for (var i=1; i<childNodes.length; i++) {
-        lineLayer += '<td class="leftLine topLine">&nbsp;</td><td class="rightLine topLine">&nbsp;</td>';
-      }
-
-      let lineLayer = document.createElement('tr'),
-        lineLayer.setAttribute('class', 'lines' + isHidden),
-        lineLayer.innerHTML = `
-          <td class="rightLine"> </td>
-          ${childNodes.map(() => `
-            <td class="leftLine topLine"> </td>
-            <td class="rightLine topLine"> </td>
-          `)}
-          <td class="leftLine"> </td>
-        `;
-      let nodeLayer;
-
-      if (isVerticalLayer) {
-        nodeLayer = document.createElement('<ul>');
-        if (level + 2 === opts.verticalDepth) {
-          let tr = document.createElement('tr');
-          tr.setAttribute('class', 'verticalNodes');
-          tr.innerHTML = `<td></td>`;
-          tr.firstChild.appendChild(nodeLayer);
-        } else {
-          nodeWrapper.appendChild(nodeLayer);
-        }
-      } else {
-        nodeLayer = document.createElement('tr');
-        nodeLayer.setAttribute('class', 'nodes' + isHidden);
-        nodeWrapper.appendChild(lineLayer);
-        nodeWrapper.appendChild(nodeLayer);
-      }
-      // recurse through children nodes
-      childNodes.map(() => {
-        let nodeCell;
-
-        if (isVerticalLayer) {
-          nodeCell = document.createElement('li');
-        } else {
-          nodeCell = document.createElement('td');
-          nodeCell.setAttribute('colspan', 2);
-        }
-        nodeLayer.appendChild(nodeCell);
-        buildHierarchy(nodeCell, this, level + 1, opts, callback);
       });
     }
   }
