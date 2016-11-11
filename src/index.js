@@ -216,8 +216,7 @@ export default class OrgChart {
     let target = [];
 
     if (relation === 'parent') {
-      target.push(this._closest(node, (el) => el.classList.contains('nodes'))
-        .parendNode.children[0].querySelector('.node'));
+      target.push(this._closest(node, (el) => el.classList.contains('nodes')).parendNode.children[0].querySelector('.node'));
     } else if (relation === 'children') {
       target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').children.lastChild.children)
         .map((el) => el.querySelector('.node'));
@@ -939,8 +938,10 @@ export default class OrgChart {
     let that = this;
 
     return new Promise(function (resolve, reject) {
-      for (let child of nodeData.children) {
-        child.parentId = nodeData.id;
+      if (nodeData.children) {
+        for (let child of nodeData.children) {
+          child.parentId = nodeData.id;
+        }
       }
 
       // construct the content of node
@@ -1071,7 +1072,7 @@ export default class OrgChart {
           lineLayer.setAttribute('class', 'lines' + isHidden);
           lineLayer.innerHTML = `
             <td class="rightLine">&nbsp;</td>
-            ${childNodes.map(() => `
+            ${childNodes.slice(1).map(() => `
               <td class="leftLine topLine">&nbsp;</td>
               <td class="rightLine topLine">&nbsp;</td>
               `).join('')}
