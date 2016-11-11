@@ -88,30 +88,25 @@ export default class OrgChart {
     return el && (fn(el) ? el : this._closest(el.parentNode, fn));
   }
   _siblings(el, expr) {
-    let sibs = [];
-
-    for (let child of el.parseNode.children) {
+    return Array.from(el.parentNode.children).filter((child) => {
       if (child !== el) {
         if (expr) {
-          if (el.matches(expr)) {
-            sibs.push(child);
-          }
-        } else {
-          sibs.push(child);
+          return el.matches(expr);
         }
+        return true;
       }
-    }
-    return sibs;
+      return false;
+    });
   }
   _prevAll(el, expr) {
-    let sibs = [];
-    let preSib = el.previousElementSibling;
+    let sibs = [],
+      prevSib = el.previousElementSibling;
 
-    while (preSib) {
+    while (prevSib) {
       if (!expr || el.matches(expr)) {
-        sibs.push(preSib);
+        sibs.push(prevSib);
       }
-      preSib = preSib.previousElementSibling;
+      prevSib = prevSib.previousElementSibling;
     }
     return sibs;
   }
@@ -216,9 +211,10 @@ export default class OrgChart {
     let target = [];
 
     if (relation === 'parent') {
-      target.push(this._closest(node, (el) => el.classList.contains('nodes')).parendNode.children[0].querySelector('.node'));
+      target.push(this._closest(node, (el) => el.classList.contains('nodes'))
+        .parentNode.children[0].querySelector('.node'));
     } else if (relation === 'children') {
-      target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').children.lastChild.children)
+      target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').lastChild.children)
         .map((el) => el.querySelector('.node'));
     } else {
       target = this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
@@ -231,6 +227,45 @@ export default class OrgChart {
       return { 'exist': true, 'visible': false, 'nodes': target };
     }
     return { 'exist': false, 'visible': false, 'nodes': target };
+  }
+  _switchHorizontalArrow(node) {
+    let opts = this.chart.dataset.options,
+      leftEdge = node.querySelector('.leftEdge'),
+      rightEdge = node.querySelector('.rightEdge'),
+      temp = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode;
+
+    if (opts.toggleSiblingsResp && (typeof opts.ajaxURL === 'undefined' ||
+      this._closest(node, (el) => el.classList.contains('.nodes')).dataset.siblingsLoaded)) {
+      let prevSib = temp.previousElementSibling,
+        nextSib = temp.nextElementSibling;
+
+      if (prevSib) {
+        if (prevSib.classList.contains('hidden')) {
+          leftEdge.classList.add('fa-chevron-left');
+          leftEdge.classList.remove('fa-chevron-right');
+        } else {
+          leftEdge.classList.add('fa-chevron-right');
+          leftEdge.classList.remove('fa-chevron-left');
+        }
+      }
+      if (nextSib) {
+        if (nextSib.classList.contains('hidden')) {
+          rightEdge.classList.add('fa-chevron-right');
+          rightEdge.classList.remove('fa-chevron-left');
+        } else {
+          rightEdge.classList.add('fa-chevron-left');
+          rightEdge.classList.remove('fa-chevron-right');
+        }
+      }
+    } else {
+      let sibs = this._siblings(temp),
+        sibsVisible = sibs.length ? !sibs.some((el) => el.classList.contains('hidden')) : false;
+
+      leftEdge.classList.toggle('fa-chevron-right', sibsVisible);
+      leftEdge.classList.toggle('fa-chevron-left', !sibsVisible);
+      rightEdge.classList.toggle('fa-chevron-left', sibsVisible);
+      rightEdge.classList.toggle('fa-chevron-right', !sibsVisible);
+    }
   }
   _hoverNode(event) {
     let node = event.target,
@@ -254,8 +289,9 @@ export default class OrgChart {
         this._switchHorizontalArrow(node);
       }
     } else {
-      node.querySelector(':scope > .edge')
-        .classList.remove('fa-chevron-up', 'fa-chevron-down', 'fa-chevron-right', 'fa-chevron-left');
+      Array.from(node.querySelectorAll(':scope > .edge')).forEach((el) => {
+        el.classList.remove('fa-chevron-up', 'fa-chevron-down', 'fa-chevron-right', 'fa-chevron-left');
+      });
     }
   }
   // define node click event handler
@@ -290,6 +326,10 @@ export default class OrgChart {
       .catch(function (err) {
         console.error('Failed to create parent node', err);
       });
+  }
+  _switchVerticalArrow(arrow) {
+    arrow.classList.toggle('fa-chevron-up');
+    arrow.classList.toggle('fa-chevron-down');
   }
   // show the parent node of the specified node
   showParent(node) {
@@ -512,21 +552,22 @@ export default class OrgChart {
   // show the children nodes of the specified node
   showDescendants(node) {
     let that = this,
-      temp = this._prevAll(node.parentNode.parentNode),
+      temp = this._nextAll(node.parentNode.parentNode),
       descendants = [];
 
     this._removeClass(temp, 'hidden');
     if (temp.some((el) => el.classList.contains('verticalNodes'))) {
       temp.forEach((el) => {
-        descendants.push([...Array.from(el.querySelectorAll('.node')).filter((el) => {
+        Array.prototype.push.apply(descendants, Array.from(el.querySelectorAll('.node')).filter((el) => {
           return that._isVisible(el);
-        })]);
+        }));
       });
     } else {
       Array.from(temp[2].children).forEach((el) => {
-        descendants.push([...Array.from(el.querySelector('tr').querySelectorAll('.node')).filter((el) => {
-          return that._isVisible(el);
-        })]);
+        Array.prototype.push.apply(descendants,
+          Array.from(el.querySelector('tr').querySelectorAll('.node')).filter((el) => {
+            return that._isVisible(el);
+          }));
       });
     }
     // the two following statements are used to enforce browser to repaint
@@ -536,7 +577,7 @@ export default class OrgChart {
       el.classList.remove('slide-up');
     });
     descendants[0].addEventListener('transitionend', function () {
-      descendants.removeClass('slide');
+      that._removeClass(descendants, 'slide');
       if (that._isInAction(node)) {
         that._switchVerticalArrow(node.querySelector('.bottomEdge'));
       }
@@ -580,7 +621,7 @@ export default class OrgChart {
         return el.nodeName === 'TR';
       }).parentNode.children[3];
 
-      if (temp.fquerySelectorAll('.node').some((node) => {
+      if (Array.from(temp.querySelectorAll('.node')).some((node) => {
         return this._isVisible(node) && node.classList.contains('slide');
       })) { return; }
       // hide the descendant nodes of the specified node
@@ -718,13 +759,13 @@ export default class OrgChart {
   _dispatchClickEvent(event) {
     let classList = event.target.classList;
 
-    if (classList.contains('.topEdge')) {
+    if (classList.contains('topEdge')) {
       this._clickNode(event);
-    } else if (classList.contains('.rightEdge') || classList.contains('.leftEdge')) {
+    } else if (classList.contains('rightEdge') || classList.contains('leftEdge')) {
       this._clickHorizontalEdge(event);
-    } else if (classList.contains('.bottomEdge')) {
+    } else if (classList.contains('bottomEdge')) {
       this._clickBottomEdge(event);
-    } else if (classList.contains('.toggleBtn')) {
+    } else if (classList.contains('toggleBtn')) {
       this._clickToggleButton(event);
     } else {
       this._clickNode(event);
@@ -1002,7 +1043,7 @@ export default class OrgChart {
 
       nodeDiv.addEventListener('mouseenter', that._hoverNode.bind(that));
       nodeDiv.addEventListener('mouseleave', that._hoverNode.bind(that));
-      nodeDiv.addEventListener('click', that._dispatchClickEvent);
+      nodeDiv.addEventListener('click', that._dispatchClickEvent.bind(that));
       if (opts.draggable) {
         nodeDiv.addEventListener('dragstart', that._onDragStart);
         nodeDiv.addEventListener('dragover', that._onDragOver);
