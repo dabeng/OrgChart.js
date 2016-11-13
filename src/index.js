@@ -220,26 +220,37 @@ export default class OrgChart {
     return node.querySelector(':scope > .edge').className.indexOf('fa-') > -1;
   }
   // detect the exist/display state of related node
-  getNodeState(node, relation) {
-    let target = [];
+  _getNodeState(node, relation) {
+    let criteria = [];
 
     if (relation === 'parent') {
-      target.push(this._closest(node, (el) => el.classList.contains('nodes'))
-        .parentNode.children[0].querySelector('.node'));
+      criteria = this._closest(node, (el) => el.classList.contains('nodes'));
     } else if (relation === 'children') {
-      target = Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').lastChild.children)
-        .map((el) => el.querySelector('.node'));
-    } else {
+      criteria = this._closest(node, (el) => el.nodeName === 'TR').nextElementSibling;
+    } else if (relation === 'siblings') {
       target = this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
         .map((el) => el.querySelector('.node'));
     }
     if (target.length) {
       if (target.some((el) => this._isVisible(el))) {
-        return { 'exist': true, 'visible': true, 'nodes': target };
+        return { 'exist': true, 'visible': true };
       }
-      return { 'exist': true, 'visible': false, 'nodes': target };
+      return { 'exist': true, 'visible': false };
     }
-    return { 'exist': false, 'visible': false, 'nodes': target };
+    return { 'exist': false, 'visible': false };
+  }
+  // find the related nodes
+  getRelatedNodes(node, relation) {
+    if (relation === 'parent') {
+      return this._closest(node, (el) => el.classList.contains('nodes'))
+        .parentNode.children[0].querySelector('.node');
+    } else if (relation === 'children') {
+      return Array.from(this._closest(node, (el) => el.nodeName === 'TABLE').lastChild.children)
+        .map((el) => el.querySelector('.node'));
+    } else if (relation === 'siblings') {
+      return this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
+        .map((el) => el.querySelector('.node'));
+    }
   }
   _switchHorizontalArrow(node) {
     let opts = this.chart.dataset.options,
@@ -289,12 +300,12 @@ export default class OrgChart {
 
     if (event.type === 'mouseenter') {
       if (topEdge) {
-        flag = this.getNodeState(node, 'parent').visible;
+        flag = this._getNodeState(node, 'parent').visible;
         topEdge.classList.toggle('fa-chevron-up', !flag);
         topEdge.classList.toggle('fa-chevron-down', flag);
       }
       if (bottomEdge) {
-        flag = this.getNodeState(node, 'children').visible;
+        flag = this._getNodeState(node, 'children').visible;
         bottomEdge.classList.toggle('fa-chevron-down', !flag);
         bottomEdge.classList.toggle('fa-chevron-up', flag);
       }
@@ -474,7 +485,7 @@ export default class OrgChart {
       this.chart.dataset.inAjax = false;
     }
     // hide the sibling nodes
-    if (this.getNodeState(node, 'siblings').visible) {
+    if (this._getNodeState(node, 'siblings').visible) {
       this.hideSiblings(node);
     }
     // hide the lines
@@ -483,7 +494,7 @@ export default class OrgChart {
     this._css(lines, 'visibility', 'hidden');
     // hide the superior nodes with transition
     let parent = temp[0].querySelector('.node'),
-      grandfatherVisible = this.getNodeState(parent, 'parent').visible;
+      grandfatherVisible = this._getNodeState(parent, 'parent').visible;
 
     if (parent && this._isVisible(parent)) {
       parent.classList.add('slide', 'slide-down');
@@ -515,7 +526,7 @@ export default class OrgChart {
     event.stopPropagation();
     let topEdge = event.target,
       node = topEdge.parentNode,
-      parentState = this.getNodeState(node, 'parent'),
+      parentState = this._getNodeState(node, 'parent'),
       opts = this.chart.dataset.options;
 
     if (parentState.exist) {
@@ -672,7 +683,7 @@ export default class OrgChart {
     let opts = this.chart.dataset.options,
       bottomEdge = event.target,
       node = bottomEdge.parentNode,
-      childrenState = this.getNodeState(node, 'children');
+      childrenState = this._getNodeState(node, 'children');
 
     if (childrenState.exist) {
       let temp = this._closest(node, function (el) {
@@ -716,7 +727,7 @@ export default class OrgChart {
     let opts = this.chart.dataset.options,
       hEdge = event.target,
       node = hEdge.parentNode,
-      siblingsState = this.getNodeState(node, 'siblings');
+      siblingsState = this._getNodeState(node, 'siblings');
 
     if (siblingsState.exist) {
       let temp = this._closest(node, function (el) {
@@ -754,7 +765,7 @@ export default class OrgChart {
     } else {
       // load the new sibling nodes of the specified node by ajax request
       let nodeId = hEdge.parentNode.id,
-        url = (this.getNodeState(node, 'parent').exist) ?
+        url = (this._getNodeState(node, 'parent').exist) ?
           (typeof opts.ajaxURL.siblings === 'function' ?
             opts.ajaxURL.siblings(node.dataset.source) : opts.ajaxURL.siblings + nodeId) :
           (typeof opts.ajaxURL.families === 'function' ?
