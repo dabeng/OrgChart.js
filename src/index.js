@@ -47,7 +47,7 @@ export default class OrgChart {
       chart = document.createElement('div');
 
     this.chart = chart;
-    chart.dataset.options = opts;
+    chart.dataset.options = JSON.stringify(opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
     chart.addEventListener('click', function (event) {
@@ -82,7 +82,7 @@ export default class OrgChart {
         spinner.parentNode.removeChild(spinner);
       });
     }
-    opts.chartContainer.appendChild(chart);
+    document.querySelector(opts.chartContainer).appendChild(chart);
   }
   _closest(el, fn) {
     return el && (fn(el) ? el : this._closest(el.parentNode, fn));
@@ -103,7 +103,7 @@ export default class OrgChart {
       prevSib = el.previousElementSibling;
 
     while (prevSib) {
-      if (!expr || el.matches(expr)) {
+      if (!expr || prevSib.matches(expr)) {
         sibs.push(prevSib);
       }
       prevSib = prevSib.previousElementSibling;
@@ -115,7 +115,7 @@ export default class OrgChart {
     let nextSib = el.nextElementSibling;
 
     while (nextSib) {
-      if (!expr || el.matches(expr)) {
+      if (!expr || nextSib.matches(expr)) {
         sibs.push(nextSib);
       }
       nextSib = nextSib.nextElementSibling;
@@ -125,31 +125,44 @@ export default class OrgChart {
   _isVisible(el) {
     return el.offsetParent !== null;
   }
-  _addClass(elements, className) {
-    elements.forEach(function (el) {
-      el.classList.add(className);
+  _addClass(elements, classNames) {
+    elements.forEach((el) => {
+      if (classNames.indexOf(' ') > 0) {
+        classNames.split(' ').forEach((className) => el.classList.add(className));
+      } else {
+        el.classList.add(classNames);
+      }
     });
   }
   _removeClass(elements, classNames) {
-    elements.forEach(function (el) {
-      if (classNames.indexOf(' ')) {
-        for (let className of classNames.split(' ')) {
-          el.classList.remove(className);
-        }
+    elements.forEach((el) => {
+      if (classNames.indexOf(' ') > 0) {
+        classNames.split(' ').forEach((className) => el.classList.remove(className));
       } else {
         el.classList.remove(classNames);
       }
     });
   }
   _css(elements, prop, val) {
-    elements.forEach(function (el) {
+    elements.forEach((el) => {
       el.style[prop] = val;
     });
   }
   _removeAttr(elements, attr) {
-    elements.forEach(function (el) {
+    elements.forEach((el) => {
       el.removeAttr(attr);
     });
+  }
+  _one(el, type, listener, self) {
+    let one = function (event) {
+      try {
+        listener.call(self, event);
+      } finally {
+        el.removeEventListener(type, one);
+      }
+    };
+
+    el.addEventListener(type, one);
   }
   _getJSON(url) {
     return new Promise(function (resolve, reject) {
@@ -306,7 +319,7 @@ export default class OrgChart {
     let table = document.createElement('table');
 
     nodeData.relationship = '001';
-    this.createNode(nodeData, 0, opts || this.chart.dataset.options)
+    this._createNode(nodeData, 0, opts || this.chart.dataset.options)
       .then(function (nodeDiv) {
         let chart = this.chart;
 
@@ -549,6 +562,46 @@ export default class OrgChart {
       }
     }
   }
+  // recursively hide the descendant nodes of the specified node
+  hideDescendants(node) {
+    let that = this,
+      temp = this._nextAll(node.parentNode.parentNode),
+      lines = [];
+
+    if (temp[2].querySelector('.spinner')) {
+      this.chart.dataset.inAjax = false;
+    }
+    let descendants = Array.from(temp[2].querySelectorAll('.node')).filter((el) => that._isVisible(el)),
+      isVerticalDesc = temp[2].classList.contains('verticalNodes');
+
+    if (!isVerticalDesc) {
+      descendants.forEach((desc) => {
+        Array.prototype.push.apply(lines,
+          that._prevAll(that._closest(desc, (el) => el.classList.contains('nodes')), '.lines'));
+      });
+      lines = [...new Set(lines)];
+      this._css(lines, 'visibility', 'hidden');
+    }
+    this._one(descendants[0], 'transitionend', function (event) {
+      if (event.propertyName === 'top') {
+        this._removeClass(descendants, 'slide');
+        if (isVerticalDesc) {
+          that._addClass(temp, 'hidden');
+        } else {
+          lines.forEach((el) => {
+            el.removeAttribute('style');
+            el.classList.add('hidden');
+            el.parentNode.lastChild.classList.add('hidden');
+          });
+          this._addClass(Array.from(temp[2].querySelectorAll('.verticalNodes')), 'hidden');
+        }
+        if (this._isInAction(node)) {
+          this._switchVerticalArrow(node.querySelector('.bottomEdge'));
+        }
+      }
+    }, this);
+    this._addClass(descendants, 'slide slide-up');
+  }
   // show the children nodes of the specified node
   showDescendants(node) {
     let that = this,
@@ -572,16 +625,21 @@ export default class OrgChart {
     }
     // the two following statements are used to enforce browser to repaint
     this._repaint(descendants[0]);
-    descendants.forEach((el) => {
-      el.classList.add('slide');
-      el.classList.remove('slide-up');
-    });
-    descendants[0].addEventListener('transitionend', function () {
-      that._removeClass(descendants, 'slide');
-      if (that._isInAction(node)) {
-        that._switchVerticalArrow(node.querySelector('.bottomEdge'));
+    // descendants.forEach((el) => {
+    //   el.classList.add('slide');
+    //   el.classList.remove('slide-up');
+    // });
+    this._one(descendants[0], 'transitionend', (event) => {
+      // hackiness that filters the transitionend callback handling for only one of the transitioned properties
+      if (event.propertyName === 'top') {
+        this._removeClass(descendants, 'slide');
+        if (this._isInAction(node)) {
+          that._switchVerticalArrow(node.querySelector('.bottomEdge'));
+        }
       }
-    }, { 'once': true });
+    }, this);
+    this._addClass(descendants, 'slide');
+    this._removeClass(descendants, 'slide-up');
   }
   // exposed method
   addChildren(node, data, opts) {
@@ -988,7 +1046,8 @@ export default class OrgChart {
       // construct the content of node
       let nodeDiv = document.createElement('div');
 
-      nodeDiv.dataset.source = nodeData;
+      delete nodeData.children;
+      nodeDiv.dataset.source = JSON.stringify(nodeData);
       if (nodeData[opts.nodeId]) {
         nodeDiv.id = nodeData[opts.nodeId];
       }

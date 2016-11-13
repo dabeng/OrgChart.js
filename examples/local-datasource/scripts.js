@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', function () {
     ]
   },
   orgchart = new OrgChart({
-    'chartContainer': document.querySelector('#chart-container'),
+    'chartContainer': '#chart-container',
     'data' : datascource,
     'depth': 2,
     'nodeContent': 'title'
