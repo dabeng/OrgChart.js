@@ -393,63 +393,114 @@ export default class OrgChart {
       }
     }, { 'once': true});
   }
+  // show the sibling nodes of the specified node
+  showSiblings(node, direction) {
+    // firstly, show the sibling td tags
+    let siblings = [],
+      temp = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode;
+
+    if (direction) {
+      siblings = direction === 'left' ? this._prevAll(temp) : this._nextAll(temp);
+    } else {
+      siblings = this._siblings(temp);
+    }
+    this._removeClass(siblings, 'hidden');
+    // secondly, show the lines
+    let upperLevel = this._prevAll(this._closest(node, (el) => el.classList.contains('nodes')));
+
+    temp = Array.from(upperLevel[0].querySelectorAll(':scope > .hidden'));
+    if (direction) {
+      this._removeClass(temp.slice(0, siblings.length * 2), 'hidden');
+    } else {
+      this._removeClass(temp, 'hidden');
+    }
+    // thirdly, do some cleaning stuff
+    if (!this._getNodeState(node, 'parent').visible) {
+      this._removeClass(upperLevel, 'hidden');
+      let parent = upperLevel[0].querySelector('.node');
+
+      this._one(parent, 'transitionend', function (event) {
+        event.target.classList.remove('slide');
+      }, this);
+      this._repaint(parent);
+      parent.classLIst.add('slide');
+      parent.classLIst.remove('slide-down');
+    }
+    // lastly, show the sibling nodes with animation
+    siblings.forEach((sib) => {
+      Array.from(sib.querySelectorAll('.node')).forEach((node) => {
+        if (this._isVisible(node)) {
+          node.classList.add('slide');
+          node.classList.remove('slide-left', 'slide-right');
+        }
+      });
+    });
+    this._one(siblings[0].querySelector('.slide'), 'transitionend', function () {
+      siblings.forEach((sib) => {
+        this._removeClass(Array.from(sib.querySelectorAll('.slide')), 'slide');
+      });
+      if (this._isInAction(node)) {
+        this._switchHorizontalArrow(node);
+        node.querySelector('.topEdge').classList.remove('fa-chevron-up');
+        node.querySelector('.topEdge').classList.add('fa-chevron-down');
+      }
+    }, this);
+  }
   // hide the sibling nodes of the specified node
   hideSiblings(node, direction) {
-    let nodeContainer = this._closest(node, function (el) {
-      return el.nodeName === 'TABLE';
-    }).parentNode;
+    let nodeContainer = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode,
+      siblings = this._siblings(nodeContainer);
 
-    let siblings = this._siblings(nodeContainer);
-
-    for (let sib of siblings) {
+    siblings.forEach((sib) => {
       if (sib.querySelector('.spinner')) {
         this.chart.dataset.inAjax = false;
       }
-    }
+    });
 
     if (!direction || (direction && direction === 'left')) {
       let preSibs = this._prevAll(nodeContainer);
 
-      for (let sib of preSibs) {
-        for (let node of sib.querySelectorAll('.node')) {
-          if (!this._isVisible(node)) {
+      preSibs.forEach((sib) => {
+        Array.from(sib.querySelectorAll('.node')).forEach((node) => {
+          if (this._isVisible(node)) {
             node.classList.add('slide', 'slide-right');
           }
-        }
-      }
+        });
+      });
     }
     if (!direction || (direction && direction !== 'left')) {
       let nextSibs = this._nextAll(nodeContainer);
 
-      for (let sib of nextSibs) {
-        for (let node of sib.querySelectorAll('.node')) {
-          if (!this._isVisible(node)) {
+      nextSibs.forEach((sib) => {
+        Array.from(sib.querySelectorAll('.node')).forEach((node) => {
+          if (this._isVisible(node)) {
             node.classList.add('slide', 'slide-left');
           }
-        }
-      }
+        });
+      });
     }
 
     let animatedNodes = [];
 
-    for (let sib of this._siblings(nodeContainer)) {
-      animatedNodes.concat(sib.querySelectorAll('.slide'));
-    }
+    this._siblings(nodeContainer).forEach((sib) => {
+      Array.prototype.push.apply(animatedNodes, Array.from(sib.querySelectorAll('.slide')));
+    });
     let lines = [];
 
     for (let node of animatedNodes) {
       let temp = this._closest(node, function (el) {
         return el.classList.contains('nodes');
-      }).parentNode.firstChild;
+      }).previousElementSibling;
 
       lines.push(temp);
-      lines.push(temp.nextElementSibling);
+      lines.push(temp.previousElementSibling);
     }
+    lines = [...new Set(lines)];
     lines.forEach(function (line) {
       line.style.visibility = 'hidden';
     });
 
-    animatedNodes[0].addEventListener('transitionend', function () {
+    this._one(animatedNodes[0], 'transitionend', function (event) {
       lines.forEach(function (line) {
         line.removeAttribute('style');
       });
@@ -464,29 +515,33 @@ export default class OrgChart {
       } else {
         sibs = this._siblings(nodeContainer);
       }
-      let temp = this._closest(nodeContainer, function (el) {
+      let temp = Array.from(this._closest(nodeContainer, function (el) {
         return el.classList.contains('nodes');
-      }).previousElementSibling.querySelectorAll(':scope > :not(.hidden)');
+      }).previousElementSibling.querySelectorAll(':scope > :not(.hidden)'));
 
       let someLines = temp.slice(1, direction ? sibs.length * 2 + 1 : -1);
 
       this._addClass(someLines, 'hidden');
       this._removeClass(animatedNodes, 'slide');
-      sibs.querySelectorAll('.node').slice(1).forEach(function (node) {
-        if (this._isVisible(node)) {
-          node.classList.remove('slide-left', 'slide-right');
-          node.classList.add('slide-up');
-        }
+      sibs.forEach((sib) => {
+        Array.from(sib.querySelectorAll('.node')).slice(1).forEach((node) => {
+          if (this._isVisible(node)) {
+            node.classList.remove('slide-left', 'slide-right');
+            node.classList.add('slide-up');
+          }
+        });
       });
-      this._addClass(sibs.querySelectorAll('.lines'), 'hidden');
-      this._addClass(sibs.querySelectorAll('.nodes'), 'hidden');
-      this._addClass(sibs.querySelectorAll('.verticalNodes'), 'hidden');
+      sibs.forEach((sib) => {
+        this._addClass(Array.from(sib.querySelectorAll('.lines')), 'hidden');
+        this._addClass(Array.from(sib.querySelectorAll('.nodes')), 'hidden');
+        this._addClass(Array.from(sib.querySelectorAll('.verticalNodes')), 'hidden');
+      });
       this._addClass(sibs, 'hidden');
 
       if (this._isInAction(node)) {
         this._switchHorizontalArrow(node);
       }
-    }, { 'once': true });
+    }, this);
   }
   // recursively hide the ancestor node and sibling nodes of the specified node
   hideAncestorsSiblings(node) {
@@ -649,17 +704,10 @@ export default class OrgChart {
     }
     // the two following statements are used to enforce browser to repaint
     this._repaint(descendants[0]);
-    // descendants.forEach((el) => {
-    //   el.classList.add('slide');
-    //   el.classList.remove('slide-up');
-    // });
     this._one(descendants[0], 'transitionend', (event) => {
-      // hackiness that filters the transitionend callback handling for only one of the transitioned properties
-      if (event.propertyName === 'top') {
-        this._removeClass(descendants, 'slide');
-        if (this._isInAction(node)) {
-          that._switchVerticalArrow(node.querySelector('.bottomEdge'));
-        }
+      this._removeClass(descendants, 'slide');
+      if (this._isInAction(node)) {
+        this._switchVerticalArrow(node.querySelector('.bottomEdge'));
       }
     }, this);
     this._addClass(descendants, 'slide');
@@ -748,7 +796,9 @@ export default class OrgChart {
         }).parentNode,
         siblings = this._siblings(temp);
 
-      if (siblings.querySelectorAll('.node').some((node) => {
+      if (siblings.some((el) => {
+        let node = el.querySelector('.node');
+
         return this._isVisible(node) && node.classList.contains('slide');
       })) { return; }
       if (opts.toggleSiblingsResp) {
