@@ -85,7 +85,7 @@ export default class OrgChart {
     document.querySelector(opts.chartContainer).appendChild(chart);
   }
   _closest(el, fn) {
-    return el && (fn(el) ? el : this._closest(el.parentNode, fn));
+    return el && ((fn(el) && el !== this.chart) ? el : this._closest(el.parentNode, fn));
   }
   _siblings(el, expr) {
     return Array.from(el.parentNode.children).filter((child) => {
@@ -150,7 +150,7 @@ export default class OrgChart {
   }
   _removeAttr(elements, attr) {
     elements.forEach((el) => {
-      el.removeAttr(attr);
+      el.removeAttribute(attr);
     });
   }
   _one(el, type, listener, self) {
@@ -225,11 +225,11 @@ export default class OrgChart {
       state = { 'exist': false, 'visible': false };
 
     if (relation === 'parent') {
-      criteria = this._closest(node, (el) => el.classList.contains('nodes'));
+      criteria = this._closest(node, (el) => el.classList && el.classList.contains('nodes'));
       if (criteria) {
         state.exist = true;
       }
-      if (this._isVisible(criteria.previousElementSibling)) {
+      if (state.exist && this._isVisible(criteria.previousElementSibling)) {
         state.visible = true;
       }
     } else if (relation === 'children') {
@@ -237,7 +237,7 @@ export default class OrgChart {
       if (criteria) {
         state.exist = true;
       }
-      if (this._isVisible(criteria)) {
+      if (state.exist && this._isVisible(criteria)) {
         state.visible = true;
       }
     } else if (relation === 'siblings') {
@@ -245,7 +245,7 @@ export default class OrgChart {
       if (criteria.length) {
         state.exist = true;
       }
-      if (criteria.some((el) => this._isVisible(el))) {
+      if (state.exist && criteria.some((el) => this._isVisible(el))) {
         state.visible = true;
       }
     }
@@ -371,27 +371,23 @@ export default class OrgChart {
   // show the parent node of the specified node
   showParent(node) {
     // just show only one superior level
-    let temp = this._closest(node, function (el) {
-      return el.nodeName === 'TABLE';
-    }).parentNode.children;
+    let temp = this._prevAll(this._closest(node, (el) => el.classList.contains('nodes')));
 
-    for (let tr of temp) {
-      tr.classList.remove('hidden');
-    }
+    this._removeClass(temp, 'hidden');
     // just show only one line
-    this._addClass(temp[2].children.slice(1, -1), 'hidden');
+    this._addClass(Array(temp[0].children).slice(1, -1), 'hidden');
     // show parent node with animation
-    let parent = temp[0].querySelector('.node');
+    let parent = temp[2].querySelector('.node');
 
-    this._repaint(parent);
-    parent.classList.add('slide');
-    parent.classList.remove('slide-down');
-    parent.addEventListener('transitionend', function () {
+    this._one(parent, 'transitionend', function () {
       parent.classList.remove('slide');
       if (this._isInAction(node)) {
         this._switchVerticalArrow(node.querySelector(':scope > .topEdge'));
       }
-    }, { 'once': true});
+    }, this);
+    this._repaint(parent);
+    parent.classList.add('slide');
+    parent.classList.remove('slide-down');
   }
   // show the sibling nodes of the specified node
   showSiblings(node, direction) {
@@ -417,14 +413,14 @@ export default class OrgChart {
     // thirdly, do some cleaning stuff
     if (!this._getNodeState(node, 'parent').visible) {
       this._removeClass(upperLevel, 'hidden');
-      let parent = upperLevel[0].querySelector('.node');
+      let parent = upperLevel[2].querySelector('.node');
 
       this._one(parent, 'transitionend', function (event) {
         event.target.classList.remove('slide');
       }, this);
       this._repaint(parent);
-      parent.classLIst.add('slide');
-      parent.classLIst.remove('slide-down');
+      parent.classList.add('slide');
+      parent.classList.remove('slide-down');
     }
     // lastly, show the sibling nodes with animation
     siblings.forEach((sib) => {
@@ -545,9 +541,9 @@ export default class OrgChart {
   }
   // recursively hide the ancestor node and sibling nodes of the specified node
   hideAncestorsSiblings(node) {
-    let temp = this._closest(node, function (el) {
+    let temp = Array.from(this._closest(node, function (el) {
       return el.classList.contains('nodes');
-    }).parentNode.children;
+    }).parentNode.children).slice(0, 3);
 
     if (temp[0].querySelector('.spinner')) {
       this.chart.dataset.inAjax = false;
@@ -566,11 +562,11 @@ export default class OrgChart {
 
     if (parent && this._isVisible(parent)) {
       parent.classList.add('slide', 'slide-down');
-      parent.addEventListener('transitionend', function () {
+      this._one(parent, 'transitionend', function () {
         parent.classList.remove('slide');
         this._removeAttr(lines, 'style');
         this._addClass(temp, 'hidden');
-      }, { 'once': true });
+      }, this);
     }
     // if the current node has the parent node, hide it recursively
     if (parent && grandfatherVisible) {
@@ -607,12 +603,12 @@ export default class OrgChart {
       // hide the ancestor nodes and sibling nodes of the specified node
       if (parentState.visible) {
         this.hideAncestorsSiblings(node);
-        parent.addEventListener('transitionend', function () {
+        this._one(parent, 'transitionend', function () {
           if (this._isInAction(node)) {
             this._switchVerticalArrow(topEdge);
             this._switchHorizontalArrow(node);
           }
-        }, { 'once': true });
+        }, this);
       } else { // show the ancestors and siblings
         this.showParent(node);
       }
@@ -892,7 +888,7 @@ export default class OrgChart {
     let classList = event.target.classList;
 
     if (classList.contains('topEdge')) {
-      this._clickNode(event);
+      this._clickTopEdge(event);
     } else if (classList.contains('rightEdge') || classList.contains('leftEdge')) {
       this._clickHorizontalEdge(event);
     } else if (classList.contains('bottomEdge')) {
