@@ -221,23 +221,36 @@ export default class OrgChart {
   }
   // detect the exist/display state of related node
   _getNodeState(node, relation) {
-    let criteria = [];
+    let criteria,
+      state = { 'exist': false, 'visible': false };
 
     if (relation === 'parent') {
       criteria = this._closest(node, (el) => el.classList.contains('nodes'));
+      if (criteria) {
+        state.exist = true;
+      }
+      if (this._isVisible(criteria.previousElementSibling)) {
+        state.visible = true;
+      }
     } else if (relation === 'children') {
       criteria = this._closest(node, (el) => el.nodeName === 'TR').nextElementSibling;
-    } else if (relation === 'siblings') {
-      target = this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
-        .map((el) => el.querySelector('.node'));
-    }
-    if (target.length) {
-      if (target.some((el) => this._isVisible(el))) {
-        return { 'exist': true, 'visible': true };
+      if (criteria) {
+        state.exist = true;
       }
-      return { 'exist': true, 'visible': false };
+      if (this._isVisible(criteria)) {
+        state.visible = true;
+      }
+    } else if (relation === 'siblings') {
+      criteria = this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode);
+      if (criteria.length) {
+        state.exist = true;
+      }
+      if (criteria.some((el) => this._isVisible(el))) {
+        state.visible = true;
+      }
     }
-    return { 'exist': false, 'visible': false };
+
+    return state;
   }
   // find the related nodes
   getRelatedNodes(node, relation) {
