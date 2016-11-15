@@ -1,51 +1,26 @@
 export default class OrgChart {
-  constructor({
-    chartContainer,
-    data,
-    nodeTitle = 'name',
-    nodeContent,
-    nodeId = 'id',
-    toggleSiblingsResp = false,
-    depth = 999,
-    chartClass = '',
-    exportButton = false,
-    exportFilename = 'OrgChart',
-    parentNodeSymbol = 'fa-users',
-    draggable = false,
-    direction = 't2b',
-    pan = false,
-    zoom = false
-  } = {}) {
+  constructor(options) {
     this._name = 'OrgChart';
-    this.data = data;
-    this.options = {
-      'chartContainer': chartContainer,
-      'nodeTitle': nodeTitle,
-      'nodeContent': nodeContent,
-      'nodeId': nodeId,
-      'toggleSiblingsResp': toggleSiblingsResp,
-      'depth': depth,
-      'chartClass': chartClass,
-      'exportButton': exportButton,
-      'exportFilename': exportFilename,
-      'parentNodeSymbol': parentNodeSymbol,
-      'draggable': draggable,
-      'direction': direction,
-      'pan': pan,
-      'zoom': zoom
-    };
 
-    this._init();
-  }
-  get name() {
-    return this._name;
-  }
-  _init() {
-    // build the org-chart
-    let opts = this.options,
-      data = this.data,
+    let defaultOptions = {
+        'nodeTitle': 'name',
+        'nodeId': 'id',
+        'toggleSiblingsResp': false,
+        'depth': 999,
+        'chartClass': '',
+        'exportButton': false,
+        'exportFilename': 'OrgChart',
+        'parentNodeSymbol': 'fa-users',
+        'draggable': false,
+        'direction': 't2b',
+        'pan': false,
+        'zoom': false
+      },
+      opts = Object.assign(defaultOptions, options),
+      data = opts.data,
       chart = document.createElement('div');
 
+    this.options = opts;
     this.chart = chart;
     chart.dataset.options = JSON.stringify(opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
@@ -83,6 +58,9 @@ export default class OrgChart {
       });
     }
     document.querySelector(opts.chartContainer).appendChild(chart);
+  }
+  get name() {
+    return this._name;
   }
   _closest(el, fn) {
     return el && ((fn(el) && el !== this.chart) ? el : this._closest(el.parentNode, fn));
@@ -266,7 +244,7 @@ export default class OrgChart {
     }
   }
   _switchHorizontalArrow(node) {
-    let opts = this.chart.dataset.options,
+    let opts = this.options,
       leftEdge = node.querySelector('.leftEdge'),
       rightEdge = node.querySelector('.rightEdge'),
       temp = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode;
@@ -343,7 +321,7 @@ export default class OrgChart {
     let table = document.createElement('table');
 
     nodeData.relationship = '001';
-    this._createNode(nodeData, 0, opts || this.chart.dataset.options)
+    this._createNode(nodeData, 0, opts || this.options)
       .then(function (nodeDiv) {
         let chart = this.chart;
 
@@ -591,7 +569,7 @@ export default class OrgChart {
     let topEdge = event.target,
       node = topEdge.parentNode,
       parentState = this._getNodeState(node, 'parent'),
-      opts = this.chart.dataset.options;
+      opts = this.options;
 
     if (parentState.exist) {
       let temp = this._closest(node, function (el) {
@@ -712,7 +690,7 @@ export default class OrgChart {
   // exposed method
   addChildren(node, data, opts) {
     if (!opts) {
-      opts = this.chart.dataset.options;
+      opts = this.options;
     }
     let count = 0;
 
@@ -737,7 +715,7 @@ export default class OrgChart {
   // bind click event handler for the bottom edge
   _clickBottomEdge(event) {
     event.stopPropagation();
-    let opts = this.chart.dataset.options,
+    let opts = this.options,
       bottomEdge = event.target,
       node = bottomEdge.parentNode,
       childrenState = this._getNodeState(node, 'children');
@@ -781,7 +759,7 @@ export default class OrgChart {
   // bind click event handler for the left and right edges
   _clickHorizontalEdge(event) {
     event.stopPropagation();
-    let opts = this.chart.dataset.options,
+    let opts = this.options,
       hEdge = event.target,
       node = hEdge.parentNode,
       siblingsState = this._getNodeState(node, 'siblings');
@@ -901,14 +879,14 @@ export default class OrgChart {
   }
   _onDragStart(event) {
     let nodeDiv = event.target,
-      opts = this.chart.dataset.options,
+      opts = this.options,
       isFirefox = /firefox/.test(window.navigator.userAgent.toLowerCase());
 
     if (isFirefox) {
       event.dataTransfer.setData('text/html', 'hack for firefox');
     }
     // if users enable zoom or direction options
-    if (this.chart.style.transform !== 'none') {
+    if (this.chart.style.transform) {
       let ghostNode, nodeCover;
 
       if (!document.querySelector('.ghost-node')) {
@@ -960,15 +938,15 @@ export default class OrgChart {
     }
     let dragged = event.target,
       dragZone = this._closest(dragged, (el) => {
-        return el.classList.contains('.nodes');
+        return el.classList && el.classList.contains('nodes');
       }).parentNode.children[0].querySelector('.node'),
-      dragHier = this._closest(dragged, (el) => {
+      dragHier = Array.from(this._closest(dragged, (el) => {
         return el.nodeName === 'TABLE';
-      }).querySelectorAll('.node');
+      }).querySelectorAll('.node'));
 
-    this.chart.dataset.dragged = dragged;
+    this.dragged = dragged;
     Array.from(this.chart.querySelectorAll('.node')).forEach(function (node) {
-      if (dragHier.index(node) === -1) {
+      if (!dragHier.includes(node)) {
         if (opts.dropCriteria) {
           if (opts.dropCriteria(dragged, dragZone, node)) {
             node.classList.add('allowedDrop');
@@ -981,11 +959,11 @@ export default class OrgChart {
   }
   _onDragOver(event) {
     event.preventDefault();
-    let opts = this.chart.dataset.options,
+    let opts = this.options,
       dropZone = event.target,
-      dragged = this.chart.dataset.dragged,
+      dragged = this.dragged,
       dragZone = this._closest(dragged, function (el) {
-        return el.classList.contains('.nodes');
+        return el.classList && el.classList.contains('nodes');
       }).parentNode.children[0].querySelector('.node');
 
     if (Array.from(this._closest(dragged, (el) => el.nodeName === 'TABLE').querySelectorAll('.node'))
@@ -999,14 +977,14 @@ export default class OrgChart {
     });
   }
   _onDrop(event) {
-    let dropZone = event.target,
+    let dropZone = event.currentTarget,
       chart = this.chart,
-      dragged = chart.dataset.dragged,
+      dragged = this.dragged,
       dragZone = this._closest(dragged, function (el) {
-        return el.classList.contains('.nodes');
-      }).parentNode.children[0].firstChild;
+        return el.classList && el.classList.contains('nodes');
+      }).parentNode.children[0].children[0];
 
-    this._removeClass(chart.querySelectorAll('.allowedDrop'), 'allowedDrop');
+    this._removeClass(Array.from(chart.querySelectorAll('.allowedDrop')), 'allowedDrop');
     // firstly, deal with the hierarchy of drop zone
     if (!dropZone.parentNode.parentNode.nextElementSibling) { // if the drop zone is a leaf node
       let bottomEdge = document.createElement('i');
@@ -1017,22 +995,24 @@ export default class OrgChart {
       let table = this._closest(dropZone, function (el) {
           return el.nodeName === 'TABLE';
         }),
-        tr = document.createElement(tr);
+        upperTr = document.createElement('tr'),
+        lowerTr = document.createElement('tr'),
+        nodeTr = document.createElement('tr');
 
-      tr.setAttribute('class', 'lines');
-      tr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
-      table.appendChild(tr);
-      tr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
-      table.appendChild(tr);
-      tr.setAttribute('class', 'nodes');
-      tr.innerHTML = ``;
-      table.appendChild(tr);
-      for (let hEdge of dragged.querySelectorAll('.horizontalEdge')) {
+      upperTr.setAttribute('class', 'lines');
+      upperTr.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
+      table.appendChild(upperTr);
+      lowerTr.setAttribute('class', 'lines');
+      lowerTr.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
+      table.appendChild(lowerTr);
+      nodeTr.setAttribute('class', 'nodes');
+      table.appendChild(nodeTr);
+      Array.from(dragged.querySelectorAll('.horizontalEdge')).forEach((hEdge) => {
         dragged.removeChild(hEdge);
-      }
+      });
       let draggedTd = this._closest(dragged, (el) => el.nodeName === 'TABLE').parentNode;
 
-      tr.appendChild(draggedTd);
+      nodeTr.appendChild(draggedTd);
     } else {
       let dropColspan = window.parseInt(dropZone.parentNode.colspan) + 2,
         hEdge = document.createElement('i');
@@ -1090,15 +1070,15 @@ export default class OrgChart {
       }
     } else {
       dragZone.removeAttribute('colspan');
-      dragZone.removeChild(dragZone.querySelector('.bottomEdge'));
+      dragZone.querySelector('.node').removeChild(dragZone.querySelector('.bottomEdge'));
       Array.from(dragZone.parentNode.parentNode.children).slice(1)
-        .forEach((tr) => dragged.parentNode.parentNode.removeChild(tr));
+        .forEach((tr) => dragZone.parentNode.parentNode.removeChild(tr));
     }
-    let customE = new CustomEvent('nodedropped.orgchart', {
+    let customE = new CustomEvent('nodedropped.orgchart', { 'detail': {
       'draggedNode': dragged,
-      'dragZone': dragZone.children,
+      'dragZone': dragZone.children[0],
       'dropZone': dropZone
-    });
+    }});
 
     chart.dispatchEvent(customE);
   }
@@ -1174,10 +1154,10 @@ export default class OrgChart {
       nodeDiv.addEventListener('mouseleave', that._hoverNode.bind(that));
       nodeDiv.addEventListener('click', that._dispatchClickEvent.bind(that));
       if (opts.draggable) {
-        nodeDiv.addEventListener('dragstart', that._onDragStart);
-        nodeDiv.addEventListener('dragover', that._onDragOver);
-        nodeDiv.addEventListener('dragend', that._onDragEnd);
-        nodeDiv.addEventListener('drop', that._onDrop);
+        nodeDiv.addEventListener('dragstart', that._onDragStart.bind(that));
+        nodeDiv.addEventListener('dragover', that._onDragOver.bind(that));
+        nodeDiv.addEventListener('dragend', that._onDragEnd.bind(that));
+        nodeDiv.addEventListener('drop', that._onDrop.bind(that));
       }
       // allow user to append dom modification after finishing node create of orgchart
       if (opts.createNode) {
