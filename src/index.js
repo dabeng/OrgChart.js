@@ -957,17 +957,6 @@ export default class OrgChart {
   }
   _onDragOver(event) {
     event.preventDefault();
-    // let opts = this.options,
-    //   dropZone = event.currentTarget,
-    //   dragged = this.dragged,
-    //   dragZone = this._closest(dragged, function (el) {
-    //     return el.classList && el.classList.contains('nodes');
-    //   }).parentNode.children[0].querySelector('.node');
-
-    // if (Array.from(this._closest(dragged, (el) => el.nodeName === 'TABLE').querySelectorAll('.node'))
-    //   .includes(dropZone) || (opts.dropCriteria && !opts.dropCriteria(dragged, dragZone, dropZone))) {
-    //   event.dataTransfer.dropEffect = 'none';
-    // }
     let dropZone = event.currentTarget;
 
     if (!dropZone.classList.contains('allowedDrop')) {
