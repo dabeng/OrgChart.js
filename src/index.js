@@ -636,21 +636,19 @@ export default class OrgChart {
       this._css(lines, 'visibility', 'hidden');
     }
     this._one(descendants[0], 'transitionend', function (event) {
-      if (event.propertyName === 'top') {
-        this._removeClass(descendants, 'slide');
-        if (isVerticalDesc) {
-          that._addClass(temp, 'hidden');
-        } else {
-          lines.forEach((el) => {
-            el.removeAttribute('style');
-            el.classList.add('hidden');
-            el.parentNode.lastChild.classList.add('hidden');
-          });
-          this._addClass(Array.from(temp[2].querySelectorAll('.verticalNodes')), 'hidden');
-        }
-        if (this._isInAction(node)) {
-          this._switchVerticalArrow(node.querySelector('.bottomEdge'));
-        }
+      this._removeClass(descendants, 'slide');
+      if (isVerticalDesc) {
+        that._addClass(temp, 'hidden');
+      } else {
+        lines.forEach((el) => {
+          el.removeAttribute('style');
+          el.classList.add('hidden');
+          el.parentNode.lastChild.classList.add('hidden');
+        });
+        this._addClass(Array.from(temp[2].querySelectorAll('.verticalNodes')), 'hidden');
+      }
+      if (this._isInAction(node)) {
+        this._switchVerticalArrow(node.querySelector('.bottomEdge'));
       }
     }, this);
     this._addClass(descendants, 'slide slide-up');
@@ -959,15 +957,20 @@ export default class OrgChart {
   }
   _onDragOver(event) {
     event.preventDefault();
-    let opts = this.options,
-      dropZone = event.target,
-      dragged = this.dragged,
-      dragZone = this._closest(dragged, function (el) {
-        return el.classList && el.classList.contains('nodes');
-      }).parentNode.children[0].querySelector('.node');
+    // let opts = this.options,
+    //   dropZone = event.currentTarget,
+    //   dragged = this.dragged,
+    //   dragZone = this._closest(dragged, function (el) {
+    //     return el.classList && el.classList.contains('nodes');
+    //   }).parentNode.children[0].querySelector('.node');
 
-    if (Array.from(this._closest(dragged, (el) => el.nodeName === 'TABLE').querySelectorAll('.node'))
-      .includes(dropZone) || (opts.dropCriteria && !opts.dropCriteria(dragged, dragZone, dropZone))) {
+    // if (Array.from(this._closest(dragged, (el) => el.nodeName === 'TABLE').querySelectorAll('.node'))
+    //   .includes(dropZone) || (opts.dropCriteria && !opts.dropCriteria(dragged, dragZone, dropZone))) {
+    //   event.dataTransfer.dropEffect = 'none';
+    // }
+    let dropZone = event.currentTarget;
+
+    if (!dropZone.classList.contains('allowedDrop')) {
       event.dataTransfer.dropEffect = 'none';
     }
   }
@@ -1014,65 +1017,70 @@ export default class OrgChart {
 
       nodeTr.appendChild(draggedTd);
     } else {
-      let dropColspan = window.parseInt(dropZone.parentNode.colspan) + 2,
-        hEdge = document.createElement('i');
+      let dropColspan = window.parseInt(dropZone.parentNode.colSpan) + 2;
 
       dropZone.parentNode.setAttribute('colspan', dropColspan);
-      dropZone.parentNode.parentNode.nextElementSibling.firstChild.setAttribute('colspan', dropColspan);
-      if (!dragged.find('.horizontalEdge').length) {
-        hEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
-        dragged.appendChild(hEdge);
-        hEdge.classList.remove('rightEdge');
-        hEdge.classList.add('leftEdge');
-        dragged.appendChild(hEdge);
+      dropZone.parentNode.parentNode.nextElementSibling.children[0].setAttribute('colspan', dropColspan);
+      if (!dragged.querySelector('.horizontalEdge')) {
+        let rightEdge = document.createElement('i'),
+          leftEdge = document.createElement('i');
+
+        rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+        dragged.appendChild(rightEdge);
+        leftEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
+        dragged.appendChild(leftEdge);
       }
       let temp = dropZone.parentNode.parentNode.nextElementSibling.nextElementSibling,
-        line = document.createElement('td');
+        leftline = document.createElement('td'),
+        rightline = document.createElement('td');
 
-      line.setAttribute('class', 'leftLine topLine');
-      line.innerHTML = `&nbsp;`;
-      temp.insertBefore(line, temp.lastChild);
-      line.classList.remove('leftLine');
-      line.classList.add('rightLine');
-      temp.insertBefore(line, temp.lastChild);
+      leftline.setAttribute('class', 'leftLine topLine');
+      leftline.innerHTML = `&nbsp;`;
+      temp.insertBefore(leftline, temp.children[1]);
+      rightline.setAttribute('class', 'rightLine topLine');
+      rightline.innerHTML = `&nbsp;`;
+      temp.insertBefore(rightline, temp.children[2]);
       temp.nextElementSibling.appendChild(this._closest(dragged, function (el) {
         return el.nodeName === 'TABLE';
       }).parentNode);
 
-      let dropSibs = this._closest(dragged, function (el) {
-        return el.classList.contains('nodes');
-      }).children;
+      let dropSibs = this._siblings(this._closest(dragged, function (el) {
+        return el.nodeName === 'TABLE';
+      }).parentNode).map((el) => el.querySelector('.node'));
 
       if (dropSibs.length === 1) {
-        dropSibs[0].firstChild.appendChild(hEdge);
-        hEdge.classList.remove('leftEdge');
-        hEdge.classList.add('rightEdge');
-        dropSibs[0].firstChild.appendChild(hEdge);
+        let rightEdge = document.createElement('i'),
+          leftEdge = document.createElement('i');
+
+        rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+        dropSibs[0].appendChild(rightEdge);
+        leftEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
+        dropSibs[0].appendChild(leftEdge);
       }
     }
     // secondly, deal with the hierarchy of dragged node
-    let dragColspan = window.parseInt(dragZone.colspan);
+    let dragColSpan = window.parseInt(dragZone.colSpan);
 
-    if (dragColspan > 2) {
-      dragZone.setAttribute('colspan', dragColspan - 2);
-      dragZone.parentNode.nextElementSibling.firstChild.setAttribute('colspan', dragColspan - 2);
+    if (dragColSpan > 2) {
+      dragZone.setAttribute('colspan', dragColSpan - 2);
+      dragZone.parentNode.nextElementSibling.children[0].setAttribute('colspan', dragColSpan - 2);
       let temp = dragZone.parentNode.nextElementSibling.nextElementSibling;
 
-      temp.removeChild(temp.children[1]);
-      temp.removeChild(temp.children[2]);
+      temp.children[1].remove();
+      temp.children[1].remove();
 
       let dragSibs = Array.from(dragZone.parentNode.parentNode.children[3].children).map(function (td) {
         return td.querySelector('.node');
       });
 
       if (dragSibs.length === 1) {
-        dragSibs[0].removeChild(dragSibs[0].querySelector('.horizontalEdge'));
+        dragSibs[0].querySelector('.leftEdge').remove();
+        dragSibs[0].querySelector('.rightEdge').remove();
       }
     } else {
       dragZone.removeAttribute('colspan');
       dragZone.querySelector('.node').removeChild(dragZone.querySelector('.bottomEdge'));
-      Array.from(dragZone.parentNode.parentNode.children).slice(1)
-        .forEach((tr) => dragZone.parentNode.parentNode.removeChild(tr));
+      Array.from(dragZone.parentNode.parentNode.children).slice(1).forEach((tr) => tr.remove());
     }
     let customE = new CustomEvent('nodedropped.orgchart', { 'detail': {
       'draggedNode': dragged,
