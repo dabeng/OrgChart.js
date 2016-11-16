@@ -1,6 +1,14 @@
 export default class OrgChart {
   constructor(options) {
     this._name = 'OrgChart';
+    Promise.prototype.finally = function (callback) {
+      let P = this.constructor;
+
+      return this.then(
+        value => P.resolve(callback()).then(() => value),
+        reason => P.resolve(callback()).then(() => { throw reason; })
+      );
+    };
 
     let defaultOptions = {
         'nodeTitle': 'name',
@@ -18,10 +26,12 @@ export default class OrgChart {
       },
       opts = Object.assign(defaultOptions, options),
       data = opts.data,
-      chart = document.createElement('div');
+      chart = document.createElement('div'),
+      chartContainer = document.querySelector(opts.chartContainer);
 
     this.options = opts;
     this.chart = chart;
+    this.chartContainer = chartContainer;
     chart.dataset.options = JSON.stringify(opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
@@ -57,7 +67,22 @@ export default class OrgChart {
         spinner.parentNode.removeChild(spinner);
       });
     }
-    document.querySelector(opts.chartContainer).appendChild(chart);
+
+    // append the export button to the chart-container
+    if (opts.exportButton && !chartContainer.querySelector('.oc-export-btn')) {
+      let exportBtn = document.createElement('button'),
+        downloadBtn = document.createElement('a');
+
+      exportBtn.setAttribute('class', 'oc-export-btn' + (opts.chartClass !== '' ? ' ' + opts.chartClass : ''));
+      exportBtn.innerHTML = 'Export';
+      exportBtn.addEventListener('click', this._clickExportButton.bind(this));
+      downloadBtn.setAttribute('class', 'oc-download-btn' + (opts.chartClass !== '' ? ' ' + opts.chartClass : ''));
+      downloadBtn.setAttribute('download', opts.exportFilename + '.png');
+      chartContainer.appendChild(exportBtn);
+      chartContainer.appendChild(downloadBtn);
+    }
+
+    chartContainer.appendChild(chart);
   }
   get name() {
     return this._name;
@@ -1263,5 +1288,45 @@ export default class OrgChart {
         console.error('Failed to creat node', err);
       });
     }
+  }
+  _clickExportButton() {
+    let opts = this.options,
+      chartContainer = this.chartContainer,
+      mask = chartContainer.querySelector(':scope > .mask'),
+      sourceChart = chartContainer.querySelector('.orgchart:not(.hidden)'),
+      flag = opts.direction === 'l2r' || opts.direction === 'r2l';
+
+    if (!mask) {
+      mask = document.createElement('div');
+      mask.setAttribute('class', 'mask');
+      mask.innerHTML = `<i class="fa fa-circle-o-notch fa-spin spinner"></i>`;
+      chartContainer.appendChild(mask);
+    } else {
+      mask.classList.remove('hidden');
+    }
+    chartContainer.classList.add('canvasContainer');
+    window.html2canvas(sourceChart, {
+      'width': flag ? sourceChart.clientHeight : sourceChart.clientWidth,
+      'height': flag ? sourceChart.clientWidth : sourceChart.clientHeight,
+      'onclone': function (cloneDoc) {
+        let canvasContainer = cloneDoc.querySelector('.canvasContainer');
+
+        canvasContainer.style.overflow = 'visible';
+        canvasContainer.querySelector('.orgchart:not(.hidden)').transform = '';
+      }
+    })
+    .then((canvas) => {
+      let downloadBtn = chartContainer.querySelector('.oc-download-btn');
+
+      chartContainer.querySelector('.mask').classList.add('hidden');
+      downloadBtn.setAttribute('href', canvas.toDataURL());
+      downloadBtn.click();
+    })
+    .catch((err) => {
+      console.error('Failed to export the curent orgchart!', err);
+    })
+    .finally(() => {
+      chartContainer.classList.remove('canvasContainer');
+    });
   }
 }
