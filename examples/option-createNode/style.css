@@ -15,7 +15,6 @@
   opacity: 1;
 }
 .orgchart .node .second-menu {
-  display: none;
   position: absolute;
   top: 0;
   right: -70px;

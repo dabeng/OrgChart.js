@@ -1,10 +1,8 @@
 'use strict';
 
-(function($){
+document.addEventListener('DOMContentLoaded', function () {
 
-  $(function() {
-
-    var datascource = {
+  let datascource = {
       'id': '1',
       'name': 'Lao Lao',
       'title': 'general manager',
@@ -28,25 +26,26 @@
         { 'id': '12', 'name': 'Chun Miao', 'title': 'department manager' },
         { 'id': '13', 'name': 'Yu Tie', 'title': 'department manager' }
       ]
-    };
-
-    $('#chart-container').orgchart({
+    },
+    orgchart = new OrgChart({
+      'chartContainer': '#chart-container',
       'data' : datascource,
       'depth': 2,
       'nodeContent': 'title',
       'nodeID': 'id',
-      'createNode': function($node, data) {
-        var secondMenuIcon = $('<i>', {
-          'class': 'fa fa-info-circle second-menu-icon',
-          click: function() {
-            $(this).siblings('.second-menu').toggle();
-          }
+      'createNode': function(node, data) {
+        let secondMenuIcon = document.createElement('i'),
+        secondMenu = document.createElement('div');
+
+        secondMenuIcon.setAttribute('class', 'fa fa-info-circle second-menu-icon');
+        secondMenuIcon.addEventListener('click', (event) => {
+          event.target.nextElementSibling.classList.toggle('hidden');
         });
-        var secondMenu = '<div class="second-menu"><img class="avatar" src="../img/avatar/' + data.id + '.jpg"></div>';
-        $node.append(secondMenuIcon).append(secondMenu);
+        secondMenu.setAttribute('class', 'second-menu hidden');
+        secondMenu.innerHTML = `<img class="avatar" src="../img/avatar/${data.id}.jpg">`;
+        node.appendChild(secondMenuIcon)
+        node.appendChild(secondMenu);
       }
     });
 
-  });
-
-})(jQuery);
+});

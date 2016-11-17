@@ -35,15 +35,6 @@ export default class OrgChart {
     chart.dataset.options = JSON.stringify(opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
-    chart.addEventListener('click', function (event) {
-      let node = this._closest(event.target, function (el) {
-        return el.classList.contains('node');
-      });
-
-      if (!node) {
-        chart.querySelector('.node.focused').removeClass('focused');
-      }
-    }, false);
     if (typeof data === 'object') { // local json datasource
       this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0, opts);
     } else if (typeof data === 'string' && data.startsWith('#')) { // ul datasource
@@ -65,7 +56,7 @@ export default class OrgChart {
         spinner.parentNode.removeChild(spinner);
       });
     }
-
+    chart.addEventListener('click', this._clickChart);
     // append the export button to the chart-container
     if (opts.exportButton && !chartContainer.querySelector('.oc-export-btn')) {
       let exportBtn = document.createElement('button'),
@@ -1287,6 +1278,15 @@ export default class OrgChart {
       .catch(function (err) {
         console.error('Failed to creat node', err);
       });
+    }
+  }
+  _clickChart(event) {
+    let node = this._closest(event.target, function (el) {
+      return el.classList && el.classList.contains('node');
+    });
+
+    if (!node) {
+      this.chart.querySelector('.node.focused').removeClass('focused');
     }
   }
   _clickExportButton() {
