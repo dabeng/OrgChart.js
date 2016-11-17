@@ -1,20 +1,20 @@
 'use strict';
 
-(function($){
+document.addEventListener('DOMContentLoaded', function () {
 
-  $(function() {
-
-    $('#chart-container').orgchart({
-      'data' : $('#ul-data')
-    });
-
-    $('#btn-export-hier').on('click', function() {
-      if (!$('pre').length) {
-        var hierarchy = $('#chart-container').orgchart('getHierarchy');
-        $('#btn-export-hier').after('<pre>').next().append(JSON.stringify(hierarchy, null, 2));
-      }
-    });
-
+  let orgchart = new OrgChart({
+    'chartContainer': '#chart-container',
+    'data' : '#ul-data'
   });
 
-})(jQuery);
+  document.querySelector('#btn-export-hier').addEventListener('click', () => {
+    if (!document.querySelector('pre')) {
+      let pre = document.createElement('pre'), 
+        hierarchy = orgchart.getHierarchy();
+
+      pre.innerHTML = JSON.stringify(hierarchy, null, 2);
+      document.querySelector('body').insertBefore(pre, document.querySelector('.home-link'));
+    }
+  });
+
+});

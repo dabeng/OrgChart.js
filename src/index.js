@@ -44,13 +44,11 @@ export default class OrgChart {
         chart.querySelector('.node.focused').removeClass('focused');
       }
     }, false);
-    if (typeof data === 'object') {
-      if (data.nodeName) { // ul datasource
-        this.buildHierarchy(chart, this._buildJsonDS(data.children[0], 0, opts));
-      } else { // local json datasource
-        this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0, opts);
-      }
-    } else {
+    if (typeof data === 'object') { // local json datasource
+      this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0, opts);
+    } else if (typeof data === 'string' && data.startsWith('#')) { // ul datasource
+      this.buildHierarchy(chart, this._buildJsonDS(document.querySelector(data).children[0]), 0, opts);
+    } else { // ajax datasource
       let spinner = document.createElement('i');
 
       spinner.setAttribute('class', 'fa fa-circle-o-notch fa-spin spinner');
@@ -198,9 +196,11 @@ export default class OrgChart {
     if (li.id) {
       subObj.id = li.id;
     }
-    for (let subLi of li.querySelector('ul').children) {
-      if (!subObj.children) { subObj.children = []; }
-      subObj.children.push(this._buildJsonDS(subLi));
+    if (li.querySelector('ul')) {
+      Array.from(li.querySelector('ul').children).forEach((el) => {
+        if (!subObj.children) { subObj.children = []; }
+        subObj.children.push(this._buildJsonDS(el));
+      });
     }
     return subObj;
   }
@@ -1328,5 +1328,22 @@ export default class OrgChart {
     .finally(() => {
       chartContainer.classList.remove('canvasContainer');
     });
+  }
+  _loopChart(chart) {
+    let subObj = { 'id': chart.querySelector('.node').id };
+
+    if (chart.children[3]) {
+      Array.from(chart.children[3].children).forEach((el) => {
+        if (!subObj.children) { subObj.children = []; }
+        subObj.children.push(this._loopChart(el.firstChild));
+      });
+    }
+    return subObj;
+  }
+  getHierarchy() {
+    if (!this.chart.querySelector('.node').id) {
+      return 'Error: Nodes of orghcart to be exported must have id attribute!';
+    }
+    return this._loopChart(this.chart.querySelector('table'));
   }
 }
