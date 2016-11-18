@@ -1379,7 +1379,7 @@ export default class OrgChart {
       lastY = 0,
       lastTf = chart.style.transform;
 
-    if (lastTf !== 'none') {
+    if (lastTf !== '') {
       let temp = lastTf.split(',');
 
       if (!lastTf.includes('3d')) {
@@ -1405,12 +1405,11 @@ export default class OrgChart {
     chart.dataset.panStart = JSON.stringify({ 'startX': startX, 'startY': startY });
     chart.addEventListener('mousemove', this._onPanning.bind(this));
     chart.addEventListener('touchmove', this._onPanning.bind(this));
-
   }
   _onPanning(event) {
     let chart = event.currentTarget;
 
-    if (!chart.dataset.panning) {
+    if (chart.dataset.panning === 'false') {
       return;
     }
     let newX = 0,
@@ -1430,7 +1429,7 @@ export default class OrgChart {
     }
     let lastTf = chart.style.transform;
 
-    if (lastTf === 'none') {
+    if (lastTf === '') {
       if (!lastTf.includes('3d')) {
         chart.style.transform = 'matrix(1, 0, 0, 1, ' + newX + ', ' + newY + ')';
       } else {
@@ -1440,8 +1439,8 @@ export default class OrgChart {
       let matrix = lastTf.split(',');
 
       if (!lastTf.includes('3d')) {
-        matrix[4] = ' ' + newX;
-        matrix[5] = ' ' + newY + ')';
+        matrix[4] = newX;
+        matrix[5] = newY + ')';
       } else {
         matrix[12] = ' ' + newX;
         matrix[13] = ' ' + newY;
@@ -1452,20 +1451,31 @@ export default class OrgChart {
   _onPanEnd(event) {
     let chart = this.chart;
 
-    if (chart.dataset.panning) {
-      chart.data.panning = false;
+    if (chart.dataset.panning === 'true') {
+      chart.dataset.panning = false;
       chart.style.cursor = 'default';
-      chart.removeEventListener('mousemove', this._onPanning);
+      document.body.removeEventListener('mousemove', this._onPanning);
+      document.body.removeEventListener('touchmove', this._onPanning);
     }
   }
   _setChartScale(chart, newScale) {
     let lastTf = chart.style.transform;
 
-    if (lastTf === 'none') {
-      chart.style.transform = 'scale(' + newScale + ',' + newScale + ')';
+    if (lastTf === '') {
+      newScale = newScale > 0 ? 1.2 : 0.8;
+      chart.style.transform = 'matrix(' + newScale + ',0,0,' + newScale + ',0,0)';
     } else {
       if (!lastTf.includes('3d')) {
-        chart.style.transform = lastTf + ' scale(' + newScale + ',' + newScale + ')';
+        let matrix = lastTf.split(','),
+          temp = Number.parseFloat(matrix[3]);
+        
+        newScale = newScale > 0 ? temp + 0.2 : temp - 0.2;
+        if (newScale < 0.2) {
+          newScale = 0.2;
+        }
+        matrix[0] = 'matrix(' + newScale;
+        matrix[3] = newScale;
+        chart.style.transform = matrix.join(',');
       } else {
         chart.style.transform = lastTf + ' scale3d(' + newScale + ',' + newScale + ', 1)';
       }
@@ -1474,7 +1484,7 @@ export default class OrgChart {
   _onWheeling(event) {
     event.preventDefault();
 
-    let newScale = 1 + (event.originalEvent.deltaY > 0 ? -0.2 : 0.2);
+    let newScale = event.deltaY > 0 ? -1 : 1;
 
     this._setChartScale(this.chart, newScale);
   }
@@ -1511,9 +1521,9 @@ export default class OrgChart {
       let diff = chart.dataset.pinchDistEnd - chart.dataset.pinchDistStart;
 
       if (diff > 0) {
-        this._setChartScale(chart, 1.2);
+        this._setChartScale(chart, 1);
       } else if (diff < 0) {
-        this._setChartScale(chart, 0.8);
+        this._setChartScale(chart, -1);
       }
     }
   }
