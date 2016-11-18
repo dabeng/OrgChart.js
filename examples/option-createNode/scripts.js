@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function () {
       'nodeID': 'id',
       'createNode': function(node, data) {
         let secondMenuIcon = document.createElement('i'),
-        secondMenu = document.createElement('div');
+          secondMenu = document.createElement('div');
 
         secondMenuIcon.setAttribute('class', 'fa fa-info-circle second-menu-icon');
         secondMenuIcon.addEventListener('click', (event) => {

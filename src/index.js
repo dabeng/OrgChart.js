@@ -56,7 +56,7 @@ export default class OrgChart {
         spinner.parentNode.removeChild(spinner);
       });
     }
-    chart.addEventListener('click', this._clickChart);
+    chart.addEventListener('click', this._clickChart.bind(this));
     // append the export button to the chart-container
     if (opts.exportButton && !chartContainer.querySelector('.oc-export-btn')) {
       let exportBtn = document.createElement('button'),
@@ -327,10 +327,13 @@ export default class OrgChart {
   }
   // define node click event handler
   _clickNode(event) {
-    let node = event.target;
+    let clickedNode = event.currentTarget,
+      focusedNode = this.chart.querySelector('.focused');
 
-    this.chart.querySelector('.focused').classList.remove('focused');
-    node.classList.add('focused');
+    if (focusedNode) {
+      focusedNode.classList.remove('focused');
+    }
+    clickedNode.classList.add('focused');
   }
   // build the parent node of specific node
   _buildParentNode(currentRoot, nodeData, opts, callback) {
@@ -1286,7 +1289,7 @@ export default class OrgChart {
     });
 
     if (!node) {
-      this.chart.querySelector('.node.focused').removeClass('focused');
+      this.chart.querySelector('.node.focused').classList.remove('focused');
     }
   }
   _clickExportButton() {
