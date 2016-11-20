@@ -38,9 +38,9 @@ export default class OrgChart {
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
     if (typeof data === 'object') { // local json datasource
-      this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0, opts);
+      this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0);
     } else if (typeof data === 'string' && data.startsWith('#')) { // ul datasource
-      this.buildHierarchy(chart, this._buildJsonDS(document.querySelector(data).children[0]), 0, opts);
+      this.buildHierarchy(chart, this._buildJsonDS(document.querySelector(data).children[0]), 0);
     } else { // ajax datasource
       let spinner = document.createElement('i');
 
@@ -49,7 +49,7 @@ export default class OrgChart {
       this._getJSON(data)
       .then(function (resp) {
         that.buildHierarchy(chart, opts.ajaxURL ? JSON.parse(resp) :
-          that._attachRel(JSON.parse(resp), '00'), 0, opts);
+          that._attachRel(JSON.parse(resp), '00'), 0);
       })
       .catch(function (err) {
         console.error('failed to fetch datasource for orgchart', err);
@@ -355,11 +355,11 @@ export default class OrgChart {
     clickedNode.classList.add('focused');
   }
   // build the parent node of specific node
-  _buildParentNode(currentRoot, nodeData, opts, callback) {
+  _buildParentNode(currentRoot, nodeData, callback) {
     let table = document.createElement('table');
 
     nodeData.relationship = '001';
-    this._createNode(nodeData, 0, opts || this.options)
+    this._createNode(nodeData, 0)
       .then(function (nodeDiv) {
         let chart = this.chart;
 
@@ -590,9 +590,9 @@ export default class OrgChart {
     }
   }
   // exposed method
-  addParent(currentRoot, data, opts) {
-    this._buildParentNode(currentRoot, data, opts, function () {
-      if (!currentRoot.querySelector(':scope .topEdge').length) {
+  addParent(currentRoot, data) {
+    this._buildParentNode(currentRoot, data, function () {
+      if (!currentRoot.querySelector(':scope > .topEdge')) {
         let topEdge = document.createElement('i');
 
         topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
@@ -600,6 +600,42 @@ export default class OrgChart {
       }
       this.showParent(currentRoot);
     });
+  }
+  // start up loading status for requesting new nodes
+  _startLoading(arrow, node) {
+    let opts = this.options,
+      chart = this.chart;
+
+    if (typeof chart.dataset.inAjax !== 'undefined' && chart.dataset.inAjax === 'true') {
+      return false;
+    }
+
+    arrow.classList.add('hidden');
+    let spinner = document.createElement('i');
+
+    spinner.setAttribute('class', 'fa fa-circle-o-notch fa-spin spinner');
+    node.appendChild(spinner);
+    this._addClass(node.querySelectorAll(':scope > *:not(.spinner)'), 'hazy');
+    chart.dataset.inAjax = true;
+
+    let exportBtn = this.chartContainer.querySelector('.oc-export-btn' +
+      (opts.chartClass !== '' ? '.' + opts.chartClass : ''));
+
+    if (exportBtn) {
+      exportBtn.disabled = true;
+    }
+    return true;
+  }
+  // terminate loading status for requesting new nodes
+  _endLoading(arrow, node) {
+    let opts = this.options;
+
+    arrow.classList.remove('hidden');
+    node.querySelector(':scope > .spinner').removeChild();
+    this._removeClass(node.querySelectorAll(':scope > .hazy'), 'hazy');
+    this.chart.dataset.inAjax = false;
+    this.chartContainer.querySelector('.oc-export-btn' + (opts.chartClass !== '' ? '.' + opts.chartClass : ''))
+      .disabled = false;
   }
   // define click event handler for the top edge
   _clickTopEdge(event) {
@@ -633,14 +669,14 @@ export default class OrgChart {
       let nodeId = topEdge.parentNode.id;
 
       // start up loading status
-      if (this._startLoading(topEdge, node, opts)) {
+      if (this._startLoading(topEdge, node)) {
         // load new nodes
         this._getJSON(typeof opts.ajaxURL.parent === 'function' ?
           opts.ajaxURL.parent(node.dataset.source) : opts.ajaxURL.parent + nodeId)
         .then(function (resp) {
           if (this.chart.dataset.inAjax) {
             if (!Object.keys(resp).length) {
-              this.addParent(node, resp, opts);
+              this.addParent(node, resp);
             }
           }
         })
@@ -648,7 +684,7 @@ export default class OrgChart {
           console.error('Failed to get parent node data.', err);
         })
         .finally(function () {
-          this._endLoading(topEdge, node, opts);
+          this._endLoading(topEdge, node);
         });
       }
     }
@@ -723,14 +759,19 @@ export default class OrgChart {
     this._addClass(descendants, 'slide');
     this._removeClass(descendants, 'slide-up');
   }
-  // exposed method
-  addChildren(node, data, opts) {
-    if (!opts) {
-      opts = this.options;
-    }
-    let count = 0;
+  // build the child nodes of specific node
+  _buildChildNode(appendTo, nodeData, callback) {
+    let data = nodeData.children || nodeData.siblings;
 
-    this._buildChildNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, opts, function () {
+    appendTo.querySelector('td').style.colSpan = data.length * 2;
+    this._buildHierarchy(appendTo, { 'children': data }, 0, callback);
+  }
+  // exposed method
+  addChildren(node, data) {
+    let opts = this.options,
+      count = 0;
+
+    this._buildChildNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, function () {
       if (++count === data.children.length) {
         if (!node.querySelector('.bottomEdge')) {
           let bottomEdge = document.createElement('i');
@@ -751,7 +792,8 @@ export default class OrgChart {
   // bind click event handler for the bottom edge
   _clickBottomEdge(event) {
     event.stopPropagation();
-    let opts = this.options,
+    let that = this,
+      opts = this.options,
       bottomEdge = event.target,
       node = bottomEdge.parentNode,
       childrenState = this._getNodeState(node, 'children');
@@ -773,13 +815,13 @@ export default class OrgChart {
     } else { // load the new children nodes of the specified node by ajax request
       let nodeId = bottomEdge.parentNode.id;
 
-      if (this._startLoading(bottomEdge, node, opts)) {
+      if (this._startLoading(bottomEdge, node)) {
         this._getJSON(typeof opts.ajaxURL.children === 'function' ?
           opts.ajaxURL.children(node.dataset.source) : opts.ajaxURL.children + nodeId)
         .then(function (resp) {
-          if (this.chart.dataset.inAjax) {
+          if (that.chart.dataset.inAjax) {
             if (resp.children.length) {
-              this.addChildren(node, resp, Object.assign({}, opts, { depth: 0 }));
+              that.addChildren(node, JSON.parse(resp));
             }
           }
         })
@@ -787,7 +829,7 @@ export default class OrgChart {
           console.error('Failed to get children nodes data', err);
         })
         .finally(function () {
-          this._endLoading(bottomEdge, node, opts);
+          this._endLoading(bottomEdge, node);
         });
       }
     }
@@ -844,12 +886,12 @@ export default class OrgChart {
           (typeof opts.ajaxURL.families === 'function' ?
             opts.ajaxURL.families(node.dataset.source) : opts.ajaxURL.families + nodeId);
 
-      if (this._startLoading(hEdge, node, opts)) {
+      if (this._startLoading(hEdge, node)) {
         this._getJSON(url)
         .then(function (resp) {
           if (this.chart.dataset.inAjax) {
             if (resp.siblings || resp.children) {
-              this.addSiblings(node, resp, opts);
+              this.addSiblings(node, resp);
             }
           }
         })
@@ -857,7 +899,7 @@ export default class OrgChart {
           console.err('Failed to get sibling nodes data', err);
         })
         .finally(function () {
-          this._endLoading(hEdge, node, opts);
+          this._endLoading(hEdge, node);
         });
       }
     }
@@ -1118,8 +1160,9 @@ export default class OrgChart {
     chart.dispatchEvent(customE);
   }
   // create node
-  _createNode(nodeData, level, opts) {
-    let that = this;
+  _createNode(nodeData, level) {
+    let that = this,
+      opts = this.options;
 
     return new Promise(function (resolve, reject) {
       if (nodeData.children) {
@@ -1202,9 +1245,10 @@ export default class OrgChart {
       resolve(nodeDiv);
     });
   }
-  buildHierarchy(appendTo, nodeData, level, opts, callback) {
+  buildHierarchy(appendTo, nodeData, level, callback) {
     // Construct the node
     let that = this,
+      opts = this.options,
       nodeWrapper,
       childNodes = nodeData.children,
       isVerticalNode = opts.verticalDepth && (level + 1) >= opts.verticalDepth;
@@ -1214,7 +1258,7 @@ export default class OrgChart {
       if (!isVerticalNode) {
         appendTo.appendChild(nodeWrapper);
       }
-      this._createNode(nodeData, level, opts)
+      this._createNode(nodeData, level)
       .then(function (nodeDiv) {
         if (isVerticalNode) {
           nodeWrapper.appendChild(nodeDiv);
@@ -1293,7 +1337,7 @@ export default class OrgChart {
               nodeCell.setAttribute('colspan', 2);
             }
             nodeLayer.appendChild(nodeCell);
-            that.buildHierarchy(nodeCell, child, level + 1, opts, callback);
+            that.buildHierarchy(nodeCell, child, level + 1, callback);
           });
         }
       })

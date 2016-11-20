@@ -141,6 +141,10 @@
   height: 130px;
 }
 
+.orgchart .node>.hazy {
+  opacity: 0.2;
+}
+
 .orgchart .node>.spinner {
   position: absolute;
   top: calc(50% - 15px);
