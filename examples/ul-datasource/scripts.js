@@ -1,13 +1,10 @@
 'use strict';
 
-(function($){
+document.addEventListener('DOMContentLoaded', function () {
 
-  $(function() {
-
-    $('#chart-container').orgchart({
-      'data' : $('#ul-data')
-    });
-
+  let orgchart = new OrgChart({
+    'chartContainer': '#chart-container',
+    'data' : '#ul-data'
   });
 
-})(jQuery);
+});

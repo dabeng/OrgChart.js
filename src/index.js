@@ -30,6 +30,7 @@ export default class OrgChart {
       chartContainer = document.querySelector(opts.chartContainer);
 
     this.options = opts;
+    delete this.options.data;
     this.chart = chart;
     this.chartContainer = chartContainer;
     chart.dataset.options = JSON.stringify(opts);
@@ -193,10 +194,10 @@ export default class OrgChart {
     });
   }
   _buildJsonDS(li) {
-    var subObj = {
+    let subObj = {
       'name': li.firstChild.textContent.trim(),
-      'relationship': (li.parentNode.parentNode.tagName === 'li' ? '1' : '0') +
-        (li.parentNode.children > 1 ? 1 : 0) + (li.children.length ? 1 : 0)
+      'relationship': (li.parentNode.parentNode.nodeName === 'LI' ? '1' : '0') +
+        (li.parentNode.children.length > 1 ? 1 : 0) + (li.children.length ? 1 : 0)
     };
 
     if (li.id) {
