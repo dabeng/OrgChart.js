@@ -1377,17 +1377,17 @@ export default class OrgChart {
 
     let lastX = 0,
       lastY = 0,
-      lastTf = chart.style.transform;
+      lastTf = window.getComputedStyle(chart).transform;
 
     if (lastTf !== '') {
       let temp = lastTf.split(',');
 
       if (!lastTf.includes('3d')) {
-        lastX = parseInt(temp[4], 10);
-        lastY = parseInt(temp[5], 10);
+        lastX = Number.parseInt(temp[4], 10);
+        lastY = Number.parseInt(temp[5], 10);
       } else {
-        lastX = parseInt(temp[12], 10);
-        lastY = parseInt(temp[13], 10);
+        lastX = Number.parseInt(temp[12], 10);
+        lastY = Number.parseInt(temp[13], 10);
       }
     }
     let startX = 0,
@@ -1427,7 +1427,7 @@ export default class OrgChart {
     } else if (event.targetTouches.length > 1) {
       return;
     }
-    let lastTf = chart.style.transform;
+    let lastTf = window.getComputedStyle(chart).transform;
 
     if (lastTf === '') {
       if (!lastTf.includes('3d')) {
@@ -1442,8 +1442,8 @@ export default class OrgChart {
         matrix[4] = newX;
         matrix[5] = newY + ')';
       } else {
-        matrix[12] = ' ' + newX;
-        matrix[13] = ' ' + newY;
+        matrix[12] = newX;
+        matrix[13] = newY;
       }
       chart.style.transform = matrix.join(',');
     }
@@ -1459,32 +1459,27 @@ export default class OrgChart {
     }
   }
   _setChartScale(chart, newScale) {
-    let lastTf = chart.style.transform;
+    let lastTf = window.getComputedStyle(chart).transform;
 
-    if (lastTf === '') {
-      newScale = newScale > 0 ? 1.2 : 0.8;
-      chart.style.transform = 'matrix(' + newScale + ',0,0,' + newScale + ',0,0)';
+    if (lastTf === 'none') {
+      chart.style.transform = 'scale(' + newScale + ',' + newScale + ')';
     } else {
+      let matrix = lastTf.split(',');
+
       if (!lastTf.includes('3d')) {
-        let matrix = lastTf.split(','),
-          temp = Number.parseFloat(matrix[3]);
-        
-        newScale = newScale > 0 ? temp + 0.2 : temp - 0.2;
-        if (newScale < 0.2) {
-          newScale = 0.2;
-        }
         matrix[0] = 'matrix(' + newScale;
         matrix[3] = newScale;
-        chart.style.transform = matrix.join(',');
+        chart.style.transform = lastTf + ' scale(' + newScale + ',' + newScale + ')';
       } else {
         chart.style.transform = lastTf + ' scale3d(' + newScale + ',' + newScale + ', 1)';
       }
     }
+    chart.dataset.scale = newScale;
   }
   _onWheeling(event) {
     event.preventDefault();
 
-    let newScale = event.deltaY > 0 ? -1 : 1;
+    let newScale = event.deltaY > 0 ? 0.8 : 1.2;
 
     this._setChartScale(this.chart, newScale);
   }
