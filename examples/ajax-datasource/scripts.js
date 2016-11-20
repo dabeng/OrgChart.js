@@ -2,11 +2,7 @@
 
 document.addEventListener('DOMContentLoaded', function () {
 
-  $.mockjax({
-    url: '/orgchart/initdata',
-    responseTime: 1000,
-    contentType: 'application/json',
-    responseText: {
+  Mock.mock('/orgchart/initdata', {
       'name': 'Lao Lao',
       'title': 'general manager',
       'children': [
@@ -29,8 +25,8 @@ document.addEventListener('DOMContentLoaded', function () {
         { 'name': 'Chun Miao', 'title': 'department manager' },
         { 'name': 'Yu Tie', 'title': 'department manager' }
       ]
-    }
-  });
+    });
+  Mock.setup({ timeout: 1000 });
 
   let  orgchart = new OrgChart({
     'chartContainer': '#chart-container',

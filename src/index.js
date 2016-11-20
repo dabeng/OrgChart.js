@@ -10,7 +10,8 @@ export default class OrgChart {
       );
     };
 
-    let defaultOptions = {
+    let that = this,
+      defaultOptions = {
         'nodeTitle': 'name',
         'nodeId': 'id',
         'toggleSiblingsResp': false,
@@ -44,9 +45,11 @@ export default class OrgChart {
       let spinner = document.createElement('i');
 
       spinner.setAttribute('class', 'fa fa-circle-o-notch fa-spin spinner');
+      chart.appendChild(spinner);
       this._getJSON(data)
       .then(function (resp) {
-        this.buildHierarchy(chart, opts.ajaxURL ? resp : this._attachRel(resp, '00'), 0, opts);
+        that.buildHierarchy(chart, opts.ajaxURL ? JSON.parse(resp) :
+          that._attachRel(JSON.parse(resp), '00'), 0, opts);
       })
       .catch(function (err) {
         console.error('failed to fetch datasource for orgchart', err);
