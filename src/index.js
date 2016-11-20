@@ -811,14 +811,14 @@ export default class OrgChart {
         let prevSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.previousElementSibling,
           nextSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.nextElementSibling;
 
-        if (hEdge.classList.contains('.leftEdge')) {
-          if (prevSib.classList.contains('.hidden')) {
+        if (hEdge.classList.contains('leftEdge')) {
+          if (prevSib.classList.contains('hidden')) {
             this.showSiblings(node, 'left');
           } else {
             this.hideSiblings(node, 'left');
           }
         } else {
-          if (nextSib.classList.contains('.hidden')) {
+          if (nextSib.classList.contains('hidden')) {
             this.showSiblings(node, 'right');
           } else {
             this.hideSiblings(node, 'right');
