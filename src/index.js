@@ -48,8 +48,7 @@ export default class OrgChart {
       chart.appendChild(spinner);
       this._getJSON(data)
       .then(function (resp) {
-        that.buildHierarchy(chart, opts.ajaxURL ? JSON.parse(resp) :
-          that._attachRel(JSON.parse(resp), '00'), 0);
+        that.buildHierarchy(chart, opts.ajaxURL ? resp : that._attachRel(resp, '00'), 0);
       })
       .catch(function (err) {
         console.error('failed to fetch datasource for orgchart', err);
@@ -177,23 +176,24 @@ export default class OrgChart {
   }
   _getJSON(url) {
     return new Promise(function (resolve, reject) {
-      let client = new XMLHttpRequest();
+      let xhr = new XMLHttpRequest();
 
       function handler() {
         if (this.readyState !== 4) {
           return;
         }
         if (this.status === 200) {
-          resolve(this.response);
+          resolve(JSON.parse(this.response));
         } else {
           reject(new Error(this.statusText));
         }
       }
-      client.open('GET', url);
-      client.onreadystatechange = handler;
-      client.responseType = 'json';
-      client.setRequestHeader('Accept', 'application/json');
-      client.send();
+      xhr.open('GET', url);
+      xhr.onreadystatechange = handler;
+      xhr.responseType = 'json';
+      // xhr.setRequestHeader('Accept', 'application/json');
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      xhr.send();
     });
   }
   _buildJsonDS(li) {
@@ -356,24 +356,36 @@ export default class OrgChart {
   }
   // build the parent node of specific node
   _buildParentNode(currentRoot, nodeData, callback) {
-    let table = document.createElement('table');
+    let that = this,
+      table = document.createElement('table');
 
     nodeData.relationship = '001';
     this._createNode(nodeData, 0)
       .then(function (nodeDiv) {
-        let chart = this.chart;
+        let chart = that.chart;
 
         nodeDiv.classList.remove('slide-up');
         nodeDiv.classList.add('slide-down');
-        table.innerHTML = `
-          <tr class="hidden"><td colspan="2"></td></tr>
-          <tr class="lines hidden"><td colspan="2"><div class="downLine"></div></td></tr>
-          <tr class="lines hidden"><td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td></tr>
-          <tr class="nodes"><td colspan="2"></td></tr>
-        `;
-        table.firstChild.firstChild.appendChild(nodeDiv);
-        chart.insertBefore(table, chart.firstChild);
-        table.lastChild.firstChild.appendChild(chart.lastChild);
+        let parentTr = document.createElement('tr'),
+          superiorLine = document.createElement('tr'),
+          inferiorLine = document.createElement('tr'),
+          childrenTr = document.createElement('tr');
+
+        parentTr.setAttribute('class', 'hidden');
+        parentTr.innerHTML = `<td colspan="2"></td>`;
+        table.appendChild(parentTr);
+        superiorLine.setAttribute('class', 'lines hidden');
+        superiorLine.innerHTML = `<td colspan="2"><div class="downLine"></div></td>`;
+        table.appendChild(superiorLine);
+        inferiorLine.setAttribute('class', 'lines hidden');
+        inferiorLine.innerHTML = `<td class="rightLine">&nbsp;</td><td class="leftLine">&nbsp;</td>`;
+        table.appendChild(inferiorLine);
+        childrenTr.setAttribute('class', 'nodes');
+        childrenTr.innerHTML = `<td colspan="2"></td>`;
+        table.appendChild(childrenTr);
+        table.querySelector('td').appendChild(nodeDiv);
+        chart.insertBefore(table, chart.children[0]);
+        table.children[3].children[0].appendChild(chart.lastChild);
         callback();
       })
       .catch(function (err) {
@@ -591,6 +603,8 @@ export default class OrgChart {
   }
   // exposed method
   addParent(currentRoot, data) {
+    let that = this;
+
     this._buildParentNode(currentRoot, data, function () {
       if (!currentRoot.querySelector(':scope > .topEdge')) {
         let topEdge = document.createElement('i');
@@ -598,7 +612,7 @@ export default class OrgChart {
         topEdge.setAttribute('class', 'edge verticalEdge topEdge fa');
         currentRoot.appendChild(topEdge);
       }
-      this.showParent(currentRoot);
+      that.showParent(currentRoot);
     });
   }
   // start up loading status for requesting new nodes
@@ -615,7 +629,7 @@ export default class OrgChart {
 
     spinner.setAttribute('class', 'fa fa-circle-o-notch fa-spin spinner');
     node.appendChild(spinner);
-    this._addClass(node.querySelectorAll(':scope > *:not(.spinner)'), 'hazy');
+    this._addClass(Array.from(node.querySelectorAll(':scope > *:not(.spinner)')), 'hazy');
     chart.dataset.inAjax = true;
 
     let exportBtn = this.chartContainer.querySelector('.oc-export-btn' +
@@ -631,16 +645,21 @@ export default class OrgChart {
     let opts = this.options;
 
     arrow.classList.remove('hidden');
-    node.querySelector(':scope > .spinner').removeChild();
-    this._removeClass(node.querySelectorAll(':scope > .hazy'), 'hazy');
+    node.querySelector(':scope > .spinner').remove();
+    this._removeClass(Array.from(node.querySelectorAll(':scope > .hazy')), 'hazy');
     this.chart.dataset.inAjax = false;
-    this.chartContainer.querySelector('.oc-export-btn' + (opts.chartClass !== '' ? '.' + opts.chartClass : ''))
-      .disabled = false;
+    let exportBtn = this.chartContainer.querySelector('.oc-export-btn' +
+      (opts.chartClass !== '' ? '.' + opts.chartClass : ''));
+
+    if (exportBtn) {
+      exportBtn.disabled = false;
+    }
   }
   // define click event handler for the top edge
   _clickTopEdge(event) {
     event.stopPropagation();
-    let topEdge = event.target,
+    let that = this,
+      topEdge = event.target,
       node = topEdge.parentNode,
       parentState = this._getNodeState(node, 'parent'),
       opts = this.options;
@@ -674,9 +693,9 @@ export default class OrgChart {
         this._getJSON(typeof opts.ajaxURL.parent === 'function' ?
           opts.ajaxURL.parent(node.dataset.source) : opts.ajaxURL.parent + nodeId)
         .then(function (resp) {
-          if (this.chart.dataset.inAjax) {
-            if (!Object.keys(resp).length) {
-              this.addParent(node, resp);
+          if (that.chart.dataset.inAjax === 'true') {
+            if (Object.keys(resp).length) {
+              that.addParent(node, resp);
             }
           }
         })
@@ -684,7 +703,7 @@ export default class OrgChart {
           console.error('Failed to get parent node data.', err);
         })
         .finally(function () {
-          this._endLoading(topEdge, node);
+          that._endLoading(topEdge, node);
         });
       }
     }
@@ -763,12 +782,13 @@ export default class OrgChart {
   _buildChildNode(appendTo, nodeData, callback) {
     let data = nodeData.children || nodeData.siblings;
 
-    appendTo.querySelector('td').style.colSpan = data.length * 2;
-    this._buildHierarchy(appendTo, { 'children': data }, 0, callback);
+    appendTo.querySelector('td').setAttribute('colSpan', data.length * 2);
+    this.buildHierarchy(appendTo, { 'children': data }, this.options.depth, callback);
   }
   // exposed method
   addChildren(node, data) {
-    let opts = this.options,
+    let that = this,
+      opts = this.options,
       count = 0;
 
     this._buildChildNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, function () {
@@ -785,7 +805,7 @@ export default class OrgChart {
           symbol.setAttribute('class', 'fa ' + opts.parentNodeSymbol + ' symbol');
           node.querySelector(':scope > .title').appendChild(symbol);
         }
-        this.showDescendants(node);
+        that.showDescendants(node);
       }
     });
   }
@@ -819,9 +839,9 @@ export default class OrgChart {
         this._getJSON(typeof opts.ajaxURL.children === 'function' ?
           opts.ajaxURL.children(node.dataset.source) : opts.ajaxURL.children + nodeId)
         .then(function (resp) {
-          if (that.chart.dataset.inAjax) {
+          if (that.chart.dataset.inAjax === 'true') {
             if (resp.children.length) {
-              that.addChildren(node, JSON.parse(resp));
+              that.addChildren(node, resp);
             }
           }
         })
@@ -829,15 +849,131 @@ export default class OrgChart {
           console.error('Failed to get children nodes data', err);
         })
         .finally(function () {
-          this._endLoading(bottomEdge, node);
+          that._endLoading(bottomEdge, node);
         });
       }
     }
   }
+  // subsequent processing of build sibling nodes
+  _complementLine(oneSibling, siblingCount, existingSibligCount) {
+    let temp = oneSibling.parentNode.parentNode.children;
+
+    temp[0].children[0].setAttribute('colspan', siblingCount * 2);
+    temp[1].children[0].setAttribute('colspan', siblingCount * 2);
+    for (let i = 0; i < existingSibligCount; i++) {
+      let rightLine = document.createElement('td'),
+        leftLine = document.createElement('td');
+
+      rightLine.setAttribute('class', 'rightLine topLine');
+      rightLine.innerHTML = '&nbsp;';
+      temp[3].insertBefore(rightLine, temp[3].children[2]);
+      leftLine.setAttribute('class', 'leftLine topLine');
+      leftLine.innerHTML = '&nbsp;';
+      temp[3].insertBefore(leftLine, temp[3].children[2]);
+    }
+  }
+  // build the sibling nodes of specific node
+  _buildSiblingNode(chart, nodeData, callback) {
+    let newSiblingCount = nodeData.siblings ? nodeData.siblings.length : nodeData.children.length,
+      existingSibligCount = chart.parentNode.nodeName === 'TD' ? this._closest(chart, (el) => {
+        return el.nodeName === 'TR';
+      }).children.length : 1,
+      siblingCount = existingSibligCount + newSiblingCount,
+      insertPostion = (siblingCount > 1) ? Math.floor(siblingCount / 2 - 1) : 0;
+
+    // just build the sibling nodes for the specific node
+    if (chart.parentNode.nodeName === 'TD') {
+      let temp = this._prevAll(chart.parentNode.parentNode);
+
+      temp[0].remove();
+      temp[1].remove();
+      let childCount = 0;
+
+      this._buildChildNode(this._closest(chart, (el) => el.nodeName === 'TABLE'), nodeData, function () {
+        if (++childCount === newSiblingCount) {
+          let siblingTds = this._closest(chart, (el) => el.nodeName === 'TABLE').children[3].children;
+
+          if (existingSibligCount > 1) {
+            Array.from(chart.parentNode.children).forEach((el) => {
+              siblingTds[0].parentNode.insertBefore(el, siblingTds[0]);
+            });
+            chart.parentNode.parentNode.remove();
+            this._complementLine(siblingTds[0], siblingCount, existingSibligCount);
+            this._addClass(siblingTds, 'hidden');
+            siblingTds.forEach((el) => {
+              this._addClass(el.querySelectorAll('.node'), 'slide-left');
+            });
+          } else {
+            siblingTds[insertPostion].parentNode.insertBefore(chart.parentNode, siblingTds[insertPostion]);
+            chart.parentNode.parentNode.remove();
+            this._complementLine(siblingTds[insertPostion], siblingCount, 1);
+            let temp = siblingTds.slice(0, insertPostion);
+
+            this._addClass(temp, 'hidden');
+            this._addClass(temp.querySelectorAll('.node'), 'slide-right');
+
+            let temp2 = siblingTds.slice(insertPostion);
+
+            this._addClass(temp2, 'hidden');
+            this._addClass(temp2.querySelectorAll('.node'), 'slide-left');
+          }
+          callback();
+        }
+      }).bind(this);
+    } else { // build the sibling nodes and parent node for the specific ndoe
+      let nodeCount = 0;
+
+      this.buildHierarchy(nodeData, 0, () => {
+        if (++nodeCount === siblingCount) {
+          let temp = chart.nextElementSibling.children[3]
+            .children[insertPostion],
+            td = document.createElement('td');
+
+          td.setAttribute('colspan', 2);
+          td.appendChild(chart);
+          temp.parentNode.insertBefore(td, temp.nextElementSibling);
+          this._complementLine(temp, siblingCount, 1);
+
+          let temp2 = this._closest(chart, (el) => el.nodeName === 'TABLE').children[0];
+
+          temp2.classList.add('hidden');
+          this._addClass(temp2.querySelectorAll('.node'), 'slide-down');
+
+          let temp3 = this._siblings(chart.parentNode);
+
+          this._addClass(temp3, 'hidden');
+          temp3.slice(0, insertPostion).forEach((el) => {
+            this._addClass(el.querySelectorAll('.node'), 'slide-right');
+          });
+          temp3.slice(insertPostion).forEach((el) => {
+            this._addClass(el.querySelectorAll('.node'), 'slide-left');
+          });
+          callback();
+        }
+      });
+    }
+  }
+  addSiblings(node, data) {
+    this._buildSiblingNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, () => {
+      this._closest(node, (el) => el.classList.contains('.nodes'))
+        .dataset.siblingsLoaded = true;
+      if (!node.querySelector('.leftEdge')) {
+        let rightEdge = document.createElement('i'),
+          leftEdge = document.createElement('i');
+
+        rightEdge.setAttribute('class', 'edge horizontalEdge rightEdge fa');
+        node.appendChild(rightEdge);
+        leftEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
+        node.appendChild(leftEdge);
+      }
+      this.showSiblings(node);
+    }).bind(this);
+  }
   // bind click event handler for the left and right edges
   _clickHorizontalEdge(event) {
     event.stopPropagation();
-    let opts = this.options,
+    let that = this,
+      opts = this.options,
       hEdge = event.target,
       node = hEdge.parentNode,
       siblingsState = this._getNodeState(node, 'siblings');
@@ -889,9 +1025,9 @@ export default class OrgChart {
       if (this._startLoading(hEdge, node)) {
         this._getJSON(url)
         .then(function (resp) {
-          if (this.chart.dataset.inAjax) {
+          if (that.chart.dataset.inAjax === 'true') {
             if (resp.siblings || resp.children) {
-              this.addSiblings(node, resp);
+              that.addSiblings(node, resp);
             }
           }
         })
@@ -899,7 +1035,7 @@ export default class OrgChart {
           console.err('Failed to get sibling nodes data', err);
         })
         .finally(function () {
-          this._endLoading(hEdge, node);
+          that._endLoading(hEdge, node);
         });
       }
     }
@@ -1270,79 +1406,79 @@ export default class OrgChart {
             </td>
           `;
           tr.children[0].appendChild(nodeDiv);
-          nodeWrapper.appendChild(tr);
+          nodeWrapper.insertBefore(tr, nodeWrapper.children[0]);
         }
         if (callback) {
           callback();
         }
-        // Construct the inferior nodes and connectiong lines
-        if (childNodes) {
-          if (Object.keys(nodeData).length === 1) { // if nodeData is just an array
-            nodeWrapper = appendTo;
-          }
-          let isHidden = level + 1 >= opts.depth ? ' hidden' : '',
-            isVerticalLayer = opts.verticalDepth && (level + 2) >= opts.verticalDepth;
-
-          // draw the line close to parent node
-          if (!isVerticalLayer) {
-            let tr = document.createElement('tr');
-
-            tr.setAttribute('class', 'lines' + isHidden);
-            tr.innerHTML = `
-              <td colspan="${ childNodes.length * 2 }">
-                <div class="downLine"></div>
-              </td>
-            `;
-            nodeWrapper.appendChild(tr);
-          }
-          // draw the lines close to children nodes
-          let lineLayer = document.createElement('tr');
-
-          lineLayer.setAttribute('class', 'lines' + isHidden);
-          lineLayer.innerHTML = `
-            <td class="rightLine">&nbsp;</td>
-            ${childNodes.slice(1).map(() => `
-              <td class="leftLine topLine">&nbsp;</td>
-              <td class="rightLine topLine">&nbsp;</td>
-              `).join('')}
-            <td class="leftLine">&nbsp;</td>
-          `;
-          let nodeLayer;
-
-          if (isVerticalLayer) {
-            nodeLayer = document.createElement('<ul>');
-            if (level + 2 === opts.verticalDepth) {
-              let tr = document.createElement('tr');
-
-              tr.setAttribute('class', 'verticalNodes');
-              tr.innerHTML = `<td></td>`;
-              tr.firstChild.appendChild(nodeLayer);
-            } else {
-              nodeWrapper.appendChild(nodeLayer);
-            }
-          } else {
-            nodeLayer = document.createElement('tr');
-            nodeLayer.setAttribute('class', 'nodes' + isHidden);
-            nodeWrapper.appendChild(lineLayer);
-            nodeWrapper.appendChild(nodeLayer);
-          }
-          // recurse through children nodes
-          childNodes.forEach((child) => {
-            let nodeCell;
-
-            if (isVerticalLayer) {
-              nodeCell = document.createElement('li');
-            } else {
-              nodeCell = document.createElement('td');
-              nodeCell.setAttribute('colspan', 2);
-            }
-            nodeLayer.appendChild(nodeCell);
-            that.buildHierarchy(nodeCell, child, level + 1, callback);
-          });
-        }
       })
       .catch(function (err) {
         console.error('Failed to creat node', err);
+      });
+    }
+    // Construct the inferior nodes and connectiong lines
+    if (childNodes) {
+      if (Object.keys(nodeData).length === 1) { // if nodeData is just an array
+        nodeWrapper = appendTo;
+      }
+      let isHidden = level + 1 >= opts.depth ? ' hidden' : '',
+        isVerticalLayer = opts.verticalDepth && (level + 2) >= opts.verticalDepth;
+
+      // draw the line close to parent node
+      if (!isVerticalLayer) {
+        let tr = document.createElement('tr');
+
+        tr.setAttribute('class', 'lines' + isHidden);
+        tr.innerHTML = `
+          <td colspan="${ childNodes.length * 2 }">
+            <div class="downLine"></div>
+          </td>
+        `;
+        nodeWrapper.appendChild(tr);
+      }
+      // draw the lines close to children nodes
+      let lineLayer = document.createElement('tr');
+
+      lineLayer.setAttribute('class', 'lines' + isHidden);
+      lineLayer.innerHTML = `
+        <td class="rightLine">&nbsp;</td>
+        ${childNodes.slice(1).map(() => `
+          <td class="leftLine topLine">&nbsp;</td>
+          <td class="rightLine topLine">&nbsp;</td>
+          `).join('')}
+        <td class="leftLine">&nbsp;</td>
+      `;
+      let nodeLayer;
+
+      if (isVerticalLayer) {
+        nodeLayer = document.createElement('<ul>');
+        if (level + 2 === opts.verticalDepth) {
+          let tr = document.createElement('tr');
+
+          tr.setAttribute('class', 'verticalNodes');
+          tr.innerHTML = `<td></td>`;
+          tr.firstChild.appendChild(nodeLayer);
+        } else {
+          nodeWrapper.appendChild(nodeLayer);
+        }
+      } else {
+        nodeLayer = document.createElement('tr');
+        nodeLayer.setAttribute('class', 'nodes' + isHidden);
+        nodeWrapper.appendChild(lineLayer);
+        nodeWrapper.appendChild(nodeLayer);
+      }
+      // recurse through children nodes
+      childNodes.forEach((child) => {
+        let nodeCell;
+
+        if (isVerticalLayer) {
+          nodeCell = document.createElement('li');
+        } else {
+          nodeCell = document.createElement('td');
+          nodeCell.setAttribute('colspan', 2);
+        }
+        nodeLayer.appendChild(nodeCell);
+        that.buildHierarchy(nodeCell, child, level + 1, callback);
       });
     }
   }
