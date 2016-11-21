@@ -1018,9 +1018,9 @@ export default class OrgChart {
       let nodeId = hEdge.parentNode.id,
         url = (this._getNodeState(node, 'parent').exist) ?
           (typeof opts.ajaxURL.siblings === 'function' ?
-            opts.ajaxURL.siblings(node.dataset.source) : opts.ajaxURL.siblings + nodeId) :
+            opts.ajaxURL.siblings(JSON.parse(node.dataset.source)) : opts.ajaxURL.siblings + nodeId) :
           (typeof opts.ajaxURL.families === 'function' ?
-            opts.ajaxURL.families(node.dataset.source) : opts.ajaxURL.families + nodeId);
+            opts.ajaxURL.families(JSON.parse(node.dataset.source)) : opts.ajaxURL.families + nodeId);
 
       if (this._startLoading(hEdge, node)) {
         this._getJSON(url)
