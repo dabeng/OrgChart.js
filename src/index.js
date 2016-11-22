@@ -787,11 +787,11 @@ export default class OrgChart {
   }
   // exposed method
   addChildren(node, data) {
-    let that = this,
+    let that = this, 
       opts = this.options,
       count = 0;
 
-    this._buildChildNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, function () {
+    this._buildChildNode.call(this, this._closest(node, (el) => el.nodeName === 'TABLE'), data, function () {
       if (++count === data.children.length) {
         if (!node.querySelector('.bottomEdge')) {
           let bottomEdge = document.createElement('i');
@@ -889,7 +889,7 @@ export default class OrgChart {
       temp[1].remove();
       let childCount = 0;
 
-      this._buildChildNode(this._closest(chart, (el) => el.nodeName === 'TABLE'), nodeData, function () {
+      this._buildChildNode.call(this, this._closest(chart, (el) => el.nodeName === 'TABLE'), nodeData, () => {
         if (++childCount === newSiblingCount) {
           let siblingTds = this._closest(chart, (el) => el.nodeName === 'TABLE').children[3].children;
 
@@ -919,11 +919,11 @@ export default class OrgChart {
           }
           callback();
         }
-      }).bind(this);
+      });
     } else { // build the sibling nodes and parent node for the specific ndoe
       let nodeCount = 0;
 
-      this.buildHierarchy(nodeData, 0, () => {
+      this.buildHierarchy.call(this, nodeData, 0, () => {
         if (++nodeCount === siblingCount) {
           let temp = chart.nextElementSibling.children[3]
             .children[insertPostion],
@@ -954,8 +954,10 @@ export default class OrgChart {
     }
   }
   addSiblings(node, data) {
-    this._buildSiblingNode(this._closest(node, (el) => el.nodeName === 'TABLE'), data, () => {
-      this._closest(node, (el) => el.classList.contains('.nodes'))
+    let that = this;
+
+    this._buildSiblingNode.call(this, this._closest(node, (el) => el.nodeName === 'TABLE'), data, () => {
+      that._closest(node, (el) => el.classList.contains('.nodes'))
         .dataset.siblingsLoaded = true;
       if (!node.querySelector('.leftEdge')) {
         let rightEdge = document.createElement('i'),
@@ -966,8 +968,8 @@ export default class OrgChart {
         leftEdge.setAttribute('class', 'edge horizontalEdge leftEdge fa');
         node.appendChild(leftEdge);
       }
-      this.showSiblings(node);
-    }).bind(this);
+      that.showSiblings(node);
+    });
   }
   // bind click event handler for the left and right edges
   _clickHorizontalEdge(event) {
@@ -1032,7 +1034,7 @@ export default class OrgChart {
           }
         })
         .catch(function (err) {
-          console.err('Failed to get sibling nodes data', err);
+          console.error('Failed to get sibling nodes data', err);
         })
         .finally(function () {
           that._endLoading(hEdge, node);
