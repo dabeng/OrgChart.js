@@ -1327,8 +1327,15 @@ export default class OrgChart {
       if (nodeData[opts.nodeId]) {
         nodeDiv.id = nodeData[opts.nodeId];
       }
-      nodeDiv.setAttribute('class', 'node ' + (nodeData.className || '') +
-        (level >= opts.depth ? ' slide-up' : ''));
+      let inEdit = that.chart.dataset.inEdit,
+        isHidden;
+
+      if (inEdit) {
+        isHidden = inEdit === 'addChildren' ? ' slide-up' : '';
+      } else {
+        isHidden = level >= opts.depth ? ' slide-up' : '';
+      }
+      nodeDiv.setAttribute('class', 'node ' + (nodeData.className || '') + isHidden);
       if (opts.draggable) {
         nodeDiv.setAttribute('draggable', true);
       }
@@ -1434,12 +1441,14 @@ export default class OrgChart {
       if (Object.keys(nodeData).length === 1) { // if nodeData is just an array
         nodeWrapper = appendTo;
       }
-      let isHidden = level + 1 >= opts.depth ? ' hidden' : '',
+      let isHidden,
         isVerticalLayer = opts.verticalDepth && (level + 2) >= opts.verticalDepth,
         inEdit = that.chart.dataset.inEdit;
 
       if (inEdit) {
-        isHidden = (inEdit === 'addSiblings') ? '' : ' hidden';
+        isHidden = inEdit === 'addSiblings' ? '' : ' hidden';
+      } else {
+        isHidden = level + 1 >= opts.depth ? ' hidden' : '';
       }
 
       // draw the line close to parent node
