@@ -950,12 +950,8 @@ export default class OrgChart {
           let temp3 = this._siblings(nodeChart.parentNode);
 
           that._addClass(temp3, 'hidden');
-          temp3.slice(0, insertPostion).forEach((el) => {
-            that._addClass(Array.from(el.querySelectorAll('.node')), 'slide-right');
-          });
-          temp3.slice(insertPostion).forEach((el) => {
-            that._addClass(Array.from(el.querySelectorAll('.node')), 'slide-left');
-          });
+          that._addClass(that._getDescElements(temp3.slice(0, insertPostion), '.node'), 'slide-right');
+          that._addClass(that._getDescElements(temp3.slice(insertPostion), '.node'), 'slide-left');
           callback();
         }
       });
