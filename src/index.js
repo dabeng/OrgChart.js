@@ -1586,7 +1586,7 @@ export default class OrgChart {
       lastY = 0,
       lastTf = window.getComputedStyle(chart).transform;
 
-    if (lastTf !== '') {
+    if (lastTf !== 'none') {
       let temp = lastTf.split(',');
 
       if (!lastTf.includes('3d')) {
@@ -1636,7 +1636,7 @@ export default class OrgChart {
     }
     let lastTf = window.getComputedStyle(chart).transform;
 
-    if (lastTf === '') {
+    if (lastTf === 'none') {
       if (!lastTf.includes('3d')) {
         chart.style.transform = 'matrix(1, 0, 0, 1, ' + newX + ', ' + newY + ')';
       } else {
