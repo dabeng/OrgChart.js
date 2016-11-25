@@ -41,7 +41,7 @@ Mock.mock('/orgchart/asso-frontend', {
 Mock.setup({ timeout: 1000 });
 
 function closest(el, fn) {
-  return el && (fn(el) && el !== this.chart ? el : this._closest(el.parentNode, fn));
+  return el && (fn(el) && el.id !== 'chart-container' ? el : closest(el.parentNode, fn));
 }
 
 function initOrgchart(rootClass) {
@@ -51,14 +51,13 @@ function initOrgchart(rootClass) {
     'data' : '/orgchart/' + rootClass,
     'nodeContent': 'dept',
     'createNode': function(node, data) {
-      let chartContainer = document.querySelector('#chart-container'),
-        assoClass = data.className.match(/asso-\w+/)[0];
+      let chartContainer = document.querySelector('#chart-container');
 
       if (node.classList.contains('drill-down')) {
-        let drillDownIcon = document.createElement('i');
+        let drillDownIcon = document.createElement('i'),
+          assoClass = data.className.match(/asso-\w+/)[0];
 
         drillDownIcon.setAttribute('class', 'fa fa-arrow-circle-down drill-icon');
-        node.appendChild(drillDownIcon);
         drillDownIcon.addEventListener('click', function() {
           chartContainer.querySelector('.orgchart:not(.hidden)').classList.add('hidden');
           let assoChart = chartContainer.querySelector('.orgchart.' + assoClass);
@@ -69,17 +68,19 @@ function initOrgchart(rootClass) {
             assoChart.classList.remove('hidden');
           }
         });
+        node.appendChild(drillDownIcon);
       } else if (node.classList.contains('drill-up')) {
-        let drillUpIcon = document.createElement('i');
+        let drillUpIcon = document.createElement('i'),
+          assoClass = data.className.match(/asso-\w+/)[0];
 
         drillUpIcon.setAttribute('class', 'fa fa-arrow-circle-up drill-icon');
-        node.appendChild(drillUpIcon);
         drillUpIcon.addEventListener('click', function() {
           chartContainer.querySelector('.orgchart:not(.hidden)').classList.add('hidden');
           closest(chartContainer.querySelector('.drill-down.' + assoClass), (el) => {
             return el.classList && el.classList.contains('orgchart');
           }).classList.remove('hidden');
         });
+        node.appendChild(drillUpIcon);
       }
     }
   });
