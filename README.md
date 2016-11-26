@@ -1,7 +1,5 @@
 ![OrgChart](http://dabeng.github.io/OrgChart.js/img/orgchart-heading.png)
 
-#### It's a simple and direct organization chart plugin based on native JavaScript(ES6). Anytime you want a tree-like chart, you can turn to OrgChart.
-
 # [Here's the jQuery version, just enjoy it](http://github.com/dabeng/OrgChart) :blush:#
 
 ## Foreword
