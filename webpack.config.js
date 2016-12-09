@@ -1,48 +1,39 @@
-var webpack = require('webpack');
-var UglifyJsPlugin = webpack.optimize.UglifyJsPlugin;
-var path = require('path');
-var env = require('yargs').argv.mode;
-
-var libraryName = 'OrgChart';
-
-var plugins = [], outputFile;
-
-if (env === 'build') {
-  plugins.push(new UglifyJsPlugin({ minimize: true }));
-  outputFile = libraryName + '.min.js';
-} else {
-  outputFile = libraryName + '.js';
-}
-
-var config = {
-  entry: __dirname + '/src/index.js',
-  devtool: 'source-map',
+module.exports = {
+  entry: './demo/local-datasource/scripts.js',
+  // entry: {
+  //   'ajax-datasource/bundle': './app/ajax-datasource/scripts.js',
+  //   'color-coded/bundle': './app/color-coded/scripts.js',
+  //   'direction/bundle-b2t': './app/direction/b2t.js',
+  //   'direction/bundle-l2r': './app/direction/l2r.js',
+  //   'direction/bundle-r2l': './app/direction/r2l.js',
+  //   'drag-drop/bundle': './app/drag-drop/scripts.js',
+  //   'export-orgchart/bundle': './app/export-orgchart/scripts.js',
+  //   'get-hierarchy/bundle': './app/get-hierarchy/scripts.js',
+  //   'integrate-map/bundle': './app/integrate-map/scripts.js',
+  //   'local-datasource/bundle': './app/local-datasource/scripts.js',
+  //   'multiple-layers/bundle': './app/multiple-layers/scripts.js',
+  //   'ondemand-loading-data/bundle': './app/ondemand-loading-data/scripts.js',
+  //   'option-createNode/bundle': './app/option-createNode/scripts.js',
+  //   'pan-zoom/bundle': './app/pan-zoom/scripts.js',
+  //   'toggle-sibs-resp/bundle': './app/toggle-sibs-resp/scripts.js',
+  //   'ul-datasource/bundle': './app/ul-datasource/scripts.js'
+  // },
   output: {
-    path: __dirname + '/lib',
-    filename: outputFile,
-    library: libraryName,
-    libraryTarget: 'umd',
-    umdNamedDefine: true
+    path: './demo/local-datasource/',
+    // filename: '[name].js'
+    filename: 'bundle.js'
   },
+  devtool: 'source-map',
   module: {
     loaders: [
       {
-        test: /(\.jsx|\.js)$/,
+        test: /\.js$/,
+        exclude: /node_modules/,
         loader: 'babel',
-        exclude: /(node_modules|bower_components)/
-      },
-      {
-        test: /(\.jsx|\.js)$/,
-        loader: "eslint-loader",
-        exclude: /node_modules/
+        query: {
+          presets: ['es2015']
+        }
       }
     ]
-  },
-  resolve: {
-    root: path.resolve('./src'),
-    extensions: ['', '.js']
-  },
-  plugins: plugins
+  }
 };
-
-module.exports = config;
