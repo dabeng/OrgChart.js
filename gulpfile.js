@@ -9,6 +9,7 @@ var gulp = require('gulp'),
   webpack = require('webpack'),
   cleanCSS = require('gulp-clean-css'),
   sourcemaps = require('gulp-sourcemaps'),
+  path = require('path'),
   del = require('del');
 
 var paths = {
@@ -79,14 +80,46 @@ gulp.task('build', ['css', 'js', 'watch']);
 
 gulp.task('webpack', ['build'], function () {
   webpack(require('./webpack.config.js'), function(err, stats) {
-    if (err) throw new gutil.PluginError("webpack", err);
-    gutil.log("[webpack]", stats.toString());
+    if (err) throw new gutil.PluginError('webpack', err);
+    gutil.log('[webpack]', stats.toString());
   });
 });
 
 gulp.task('serve', ['webpack'], function () {
-    browserSync.init({
-      files: ['demo/**/*'],
-      server: 'demo'
+  browserSync.init({
+    files: ['demo/**/*.html', 'demo/**/*.css'],
+    server: 'demo',
+    socket: {
+      domain: 'localhost:3000'
+    }
+  });
+
+  gulp.watch(['demo/**/*.js', '!demo//**/bundle*.js']).on('change', function(file) {
+    webpack({
+      entry: file.path,
+      output: {
+        path: path.dirname(file.path),
+        filename: 'bundle.js'
+      },
+      devtool: 'source-map',
+      module: {
+        loaders: [
+          {
+            test: /\.js$/,
+            exclude: /node_modules/,
+            loader: 'babel',
+            query: {
+              presets: ['es2015']
+            }
+          }
+        ]
+      }
+    }, function(err, stats) {
+      if (err) {
+        throw new gutil.PluginError('webpack', err);
+      }
+      browserSync.reload();
     });
+  });
+
 });

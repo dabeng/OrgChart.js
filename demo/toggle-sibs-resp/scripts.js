@@ -1,4 +1,4 @@
-'use strict';
+import OrgChart from '../../build/js/orgchart.min.js';
 
 document.addEventListener('DOMContentLoaded', function () {
 

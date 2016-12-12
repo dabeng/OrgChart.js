@@ -1,27 +1,25 @@
 module.exports = {
-  entry: './demo/local-datasource/scripts.js',
-  // entry: {
-  //   'ajax-datasource/bundle': './app/ajax-datasource/scripts.js',
-  //   'color-coded/bundle': './app/color-coded/scripts.js',
-  //   'direction/bundle-b2t': './app/direction/b2t.js',
-  //   'direction/bundle-l2r': './app/direction/l2r.js',
-  //   'direction/bundle-r2l': './app/direction/r2l.js',
-  //   'drag-drop/bundle': './app/drag-drop/scripts.js',
-  //   'export-orgchart/bundle': './app/export-orgchart/scripts.js',
-  //   'get-hierarchy/bundle': './app/get-hierarchy/scripts.js',
-  //   'integrate-map/bundle': './app/integrate-map/scripts.js',
-  //   'local-datasource/bundle': './app/local-datasource/scripts.js',
-  //   'multiple-layers/bundle': './app/multiple-layers/scripts.js',
-  //   'ondemand-loading-data/bundle': './app/ondemand-loading-data/scripts.js',
-  //   'option-createNode/bundle': './app/option-createNode/scripts.js',
-  //   'pan-zoom/bundle': './app/pan-zoom/scripts.js',
-  //   'toggle-sibs-resp/bundle': './app/toggle-sibs-resp/scripts.js',
-  //   'ul-datasource/bundle': './app/ul-datasource/scripts.js'
-  // },
+  entry: {
+    'ajax-datasource/bundle': './demo/ajax-datasource/scripts.js',
+    'color-coded/bundle': './demo/color-coded/scripts.js',
+    'direction/bundle-b2t': './demo/direction/b2t.js',
+    'direction/bundle-l2r': './demo/direction/l2r.js',
+    'direction/bundle-r2l': './demo/direction/r2l.js',
+    'drag-drop/bundle': './demo/drag-drop/scripts.js',
+    'export-orgchart/bundle': './demo/export-orgchart/scripts.js',
+    'get-hierarchy/bundle': './demo/get-hierarchy/scripts.js',
+    'integrate-map/bundle': './demo/integrate-map/scripts.js',
+    'local-datasource/bundle': './demo/local-datasource/scripts.js',
+    'multiple-layers/bundle': './demo/multiple-layers/scripts.js',
+    'ondemand-loading-data/bundle': './demo/ondemand-loading-data/scripts.js',
+    'option-createNode/bundle': './demo/option-createNode/scripts.js',
+    'pan-zoom/bundle': './demo/pan-zoom/scripts.js',
+    'toggle-sibs-resp/bundle': './demo/toggle-sibs-resp/scripts.js',
+    'ul-datasource/bundle': './demo/ul-datasource/scripts.js'
+  },
   output: {
-    path: './demo/local-datasource/',
-    // filename: '[name].js'
-    filename: 'bundle.js'
+    path: './demo/',
+    filename: '[name].js'
   },
   devtool: 'source-map',
   module: {
