@@ -1,4 +1,4 @@
-import OrgChart from '../../build/js/orgchart.min.js';
+import OrgChart from '../js/orgchart.min.js';
 
 Mock.mock('/orgchart/root-node', {
       'className': 'root-node',

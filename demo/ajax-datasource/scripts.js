@@ -1,4 +1,4 @@
-import OrgChart from '../../build/js/orgchart.min.js';
+import OrgChart from '../js/orgchart.min.js';
 
 document.addEventListener('DOMContentLoaded', function () {
 

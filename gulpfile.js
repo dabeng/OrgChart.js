@@ -10,25 +10,14 @@ var gulp = require('gulp'),
   cleanCSS = require('gulp-clean-css'),
   sourcemaps = require('gulp-sourcemaps'),
   path = require('path'),
-  del = require('del');
-
-var paths = {
-  js: 'src/*.js',
-  css: 'src/*.css'
-};
+  del = require('del'),
+  merge = require('merge-stream');
 
 gulp.task('cleanCSS', function() {
   return del(['build/css']);
 });
 gulp.task('cleanJS', function() {
   return del(['build/js']);
-});
-
-gulp.task('font', function () {
-  return gulp.src([
-      'node_modules/font-awesome/fonts/*'
-    ])
-    .pipe(gulp.dest('build/fonts'));
 });
 
 gulp.task('csslint', function() {
@@ -72,8 +61,21 @@ gulp.task('js', ['eslint', 'cleanJS'], function () {
 });
 
 gulp.task('watch', function () {
-  gulp.watch(paths.js, ['js']);
-  gulp.watch(paths.css, ['css']);
+  gulp.watch('src/*.js', ['js']);
+  gulp.watch('src/*.css', ['css']);
+});
+
+gulp.task('copyVendorAssets', function() {
+  var fontawesomeCSS = gulp.src('node_modules/font-awesome/css/font-awesome.min.css')
+    .pipe(gulp.dest('demo/css/vendor'));
+
+  var fontawesomeFonts = gulp.src('node_modules/font-awesome/fonts/*')
+    .pipe(gulp.dest('demo/css/fonts'));
+
+  var html2canvas = gulp.src('node_modules/html2canvas/dist/html2canvas.min.js')
+    .pipe(gulp.dest('demo/js/vendor'));
+
+  return merge(fontawesomeCSS, fontawesomeFonts, html2canvas);
 });
 
 gulp.task('build', ['css', 'js', 'watch']);
@@ -85,16 +87,18 @@ gulp.task('webpack', ['build'], function () {
   });
 });
 
-gulp.task('serve', ['webpack'], function () {
+gulp.task('serve', ['copyVendorAssets', 'webpack'], function () {
   browserSync.init({
-    files: ['demo/**/*.html', 'demo/**/*.css'],
+    files: ['demo/**/*.html', 'demo/**/*.css', '!demo/css/vendor/*.css'],
     server: 'demo',
     socket: {
       domain: 'localhost:3000'
     }
   });
 
-  gulp.watch(['demo/**/*.js', '!demo//**/bundle*.js']).on('change', function(file) {
+  gulp.watch('demo/js/*').on('change', browserSync.reload);
+
+  gulp.watch(['demo/**/*.js', '!demo/js/*', '!demo/js/vendor/*', '!demo/**/bundle*.js']).on('change', function(file) {
     webpack({
       entry: file.path,
       output: {
@@ -105,8 +109,6 @@ gulp.task('serve', ['webpack'], function () {
       module: {
         loaders: [
           {
-            test: /\.js$/,
-            exclude: /node_modules/,
             loader: 'babel',
             query: {
               presets: ['es2015']

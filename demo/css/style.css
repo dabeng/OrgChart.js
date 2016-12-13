@@ -1,11 +1,11 @@
 #wrapper {
   width: 860px;
   margin: 0 auto;
-  font-family: "Architects Daughter";
+  font-family: "Arial";
 }
 
 #wrapper li {
-  margin-top: 10px;
+  margin-top: 20px;
 }
 
 #wrapper a {
