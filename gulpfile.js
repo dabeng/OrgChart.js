@@ -94,7 +94,7 @@ gulp.task('serve', ['copyVendorAssets', 'webpack'], function () {
     files: ['demo/**/*.html', 'demo/**/*.css', '!demo/css/vendor/*.css'],
     server: 'demo',
     socket: {
-      domain: 'localhost:3000'
+      domain: 'localhost:3001'
     }
   });
 

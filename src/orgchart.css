@@ -24,7 +24,7 @@
 }
 
 .orgchart .hidden, .orgchart~.hidden {
-  display: none!important;
+  display: none;
 }
 
 .orgchart *, .orgchart *:before, .orgchart *:after {
@@ -54,7 +54,7 @@
 
 .orgchart .verticalNodes ul {
   list-style: none;
-  margin:0px;
+  margin: 0;
   padding-left: 24px;
 }
 
@@ -77,8 +77,8 @@
 }
 
 .orgchart table {
-  border-spacing: 0!important;
-  border-collapse: separate!important;
+  border-spacing: 0;
+  border-collapse: separate;
 }
 
 .orgchart>table:first-child{
@@ -98,18 +98,18 @@
 .orgchart tr.lines .rightLine {
   border-right: 1px solid rgba(217, 83, 79, 0.8);
   float: none;
-  border-radius: 0px;
+  border-radius: 0;
 }
 
 .orgchart tr.lines .leftLine {
   border-left: 1px solid rgba(217, 83, 79, 0.8);
   float: none;
-  border-radius: 0px;
+  border-radius: 0;
 }
 
 .orgchart tr.lines .downLine {
   background-color: rgba(217, 83, 79, 0.8);
-  margin: 0px auto;
+  margin: 0 auto;
   height: 20px;
   width: 2px;
   float: none;
@@ -377,14 +377,6 @@
   border-radius: 4px;
 }
 
-.oc-export-btn[disabled] {
-  cursor: not-allowed;
-  filter: alpha(opacity=30);
-  -webkit-box-shadow: none;
-  box-shadow: none;
-  opacity: 0.3;
-}
-
 .oc-export-btn:hover,.oc-export-btn:focus,.oc-export-btn:active  {
   background-color: #449d44;
   border-color: #347a34;
@@ -392,10 +384,10 @@
 
 .orgchart~.mask {
   position: absolute;
-  top: 0px;
-  right: 0px;
-  bottom: 0px;
-  left: 0px;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: 999;
   text-align: center;
   background-color: rgba(0,0,0,0.3);
@@ -410,9 +402,8 @@
 }
 
 .orgchart .node {
+  -webkit-transition: all 0.3s;
   transition: all 0.3s;
-  webkit-transition: all 0.3s;
-  /*opacity: 1;*/
   top: 0;
   left: 0;
 }
