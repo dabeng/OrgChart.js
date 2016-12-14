@@ -24,6 +24,8 @@ gulp.task('csslint', function() {
   gulp.src('src/*.css')
     .pipe(csslint({
       'adjoining-classes': false,
+      'box-sizing': false,
+      'box-model': false,
       'fallback-colors': false,
       'order-alphabetical': false
     }))

@@ -27,7 +27,7 @@
   display: none;
 }
 
-.orgchart *, .orgchart *:before, .orgchart *:after {
+.orgchart div, .orgchart div:before, .orgchart div:after {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -161,7 +161,7 @@
   top: -10000px;
 }
 
-.orgchart .ghost-node>* {
+.orgchart .ghost-node rect {
   fill: #ffffff;
   stroke: #bf0000;
 }
