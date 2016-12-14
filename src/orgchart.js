@@ -283,6 +283,7 @@ export default class OrgChart {
       return this._siblings(this._closest(node, (el) => el.nodeName === 'TABLE').parentNode)
         .map((el) => el.querySelector('.node'));
     }
+    return [];
   }
   _switchHorizontalArrow(node) {
     let opts = this.options,
@@ -900,33 +901,33 @@ export default class OrgChart {
 
       that._buildChildNode.call(that, that._closest(nodeChart.parentNode, (el) => el.nodeName === 'TABLE'),
         nodeData, () => {
-        if (++childCount === newSiblingCount) {
-          let siblingTds = Array.from(that._closest(nodeChart.parentNode, (el) => el.nodeName === 'TABLE')
-            .lastChild.children);
+          if (++childCount === newSiblingCount) {
+            let siblingTds = Array.from(that._closest(nodeChart.parentNode, (el) => el.nodeName === 'TABLE')
+              .lastChild.children);
 
-          if (existingSibligCount > 1) {
-            Array.from(nodeChart.parentNode.children).forEach((el) => {
-              siblingTds[0].parentNode.insertBefore(el, siblingTds[0]);
-            });
-            nodeChart.parentNode.parentNode.remove();
-            that._complementLine(siblingTds[0], siblingCount, existingSibligCount);
-            that._addClass(siblingTds, 'hidden');
-            siblingTds.forEach((el) => {
-              that._addClass(el.querySelectorAll('.node'), 'slide-left');
-            });
-          } else {
-            let temp = nodeChart.parentNode.parentNode;
+            if (existingSibligCount > 1) {
+              Array.from(nodeChart.parentNode.children).forEach((el) => {
+                siblingTds[0].parentNode.insertBefore(el, siblingTds[0]);
+              });
+              nodeChart.parentNode.parentNode.remove();
+              that._complementLine(siblingTds[0], siblingCount, existingSibligCount);
+              that._addClass(siblingTds, 'hidden');
+              siblingTds.forEach((el) => {
+                that._addClass(el.querySelectorAll('.node'), 'slide-left');
+              });
+            } else {
+              let temp = nodeChart.parentNode.parentNode;
 
-            siblingTds[insertPostion].parentNode.insertBefore(nodeChart.parentNode, siblingTds[insertPostion + 1]);
-            temp.remove();
-            that._complementLine(siblingTds[insertPostion], siblingCount, 1);
-            that._addClass(siblingTds, 'hidden');
-            that._addClass(that._getDescElements(siblingTds.slice(0, insertPostion + 1), '.node'), 'slide-right');
-            that._addClass(that._getDescElements(siblingTds.slice(insertPostion + 1), '.node'), 'slide-left');
+              siblingTds[insertPostion].parentNode.insertBefore(nodeChart.parentNode, siblingTds[insertPostion + 1]);
+              temp.remove();
+              that._complementLine(siblingTds[insertPostion], siblingCount, 1);
+              that._addClass(siblingTds, 'hidden');
+              that._addClass(that._getDescElements(siblingTds.slice(0, insertPostion + 1), '.node'), 'slide-right');
+              that._addClass(that._getDescElements(siblingTds.slice(insertPostion + 1), '.node'), 'slide-left');
+            }
+            callback();
           }
-          callback();
-        }
-      });
+        });
     } else { // build the sibling nodes and parent node for the specific ndoe
       let nodeCount = 0;
 
@@ -1414,7 +1415,7 @@ export default class OrgChart {
       .then(function (nodeDiv) {
         if (isVerticalNode) {
           nodeWrapper.appendChild(nodeDiv);
-        }else {
+        } else {
           let tr = document.createElement('tr');
 
           tr.innerHTML = `

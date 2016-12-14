@@ -295,7 +295,7 @@
 	        return "TABLE" === e.nodeName;
 	      }).parentNode).map(function (e) {
 	        return e.querySelector(".node");
-	      }) : void 0;
+	      }) : [];
 	    } }, { key: "_switchHorizontalArrow", value: function value(e) {
 	      var t = this.options,
 	          n = e.querySelector(".leftEdge"),
