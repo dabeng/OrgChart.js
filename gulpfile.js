@@ -11,7 +11,8 @@ var gulp = require('gulp'),
   sourcemaps = require('gulp-sourcemaps'),
   path = require('path'),
   del = require('del'),
-  merge = require('merge-stream');
+  merge = require('merge-stream'),
+  plumber = require('gulp-plumber');
 
 gulp.task('cleanCSS', function() {
   return del(['build/css']);
@@ -87,7 +88,7 @@ gulp.task('webpack', ['build'], function () {
     if (err) {
       throw new gutil.PluginError('webpack', err);
     }
-    gutil.log(gutil.colors.green('[webpack]', stats.toString()));
+    gutil.log('[webpack]', stats.toString());
   });
 });
 
@@ -96,7 +97,7 @@ gulp.task('serve', ['copyVendorAssets', 'webpack'], function () {
     files: ['demo/**/*.html', 'demo/**/*.css', '!demo/css/vendor/*.css'],
     server: 'demo',
     socket: {
-      domain: 'localhost:3001'
+      domain: 'localhost:3000'
     }
   });
 

@@ -1,10 +1,208 @@
-'use strict';
+import OrgChart from '../js/orgchart.min.js';
 
-(function($){
+function closest(el, fn) {
+  return el && ((fn(el) && el !== document.querySelector('.orgchart')) ? el : closest(el.parentNode, fn));
+}
 
-  $(function() {
+function addClass(elements, classNames) {
+  elements.forEach((el) => {
+    if (classNames.includes(' ')) {
+      classNames.split(' ').forEach((className) => el.classList.add(className));
+    } else {
+      el.classList.add(classNames);
+    }
+  });
+}
 
-    var datascource = {
+function removeClass(elements, classNames) {
+  elements.forEach((el) => {
+    if (classNames.includes(' ')) {
+      classNames.split(' ').forEach((className) => el.classList.remove(className));
+    } else {
+      el.classList.remove(classNames);
+    }
+  });
+}
+
+function bindEventHandler(selector, type, fn, parentSelector) {
+  if (parentSelector) {
+    document.querySelector(parentSelector).addEventListener(type, function (event) {
+      if ((event.target.classList && event.target.classList.contains(selector.slice(1))) ||
+        closest(event.target, el => el.classList && el.classList.contains(selector.slice(1)))) {
+          fn(event);
+      }
+    });
+  } else {
+    document.querySelectorAll(selector).forEach(element => {
+      element.addEventListener(type, fn);
+    });
+  }
+}
+
+function clickNode(event) {
+  let sNode = closest(event.target, el => el.classList && el.classList.contains('node')),
+    sNodeInput = document.getElementById('selected-node');
+
+  sNodeInput.value = sNode.querySelector('.title').textContent;
+  sNodeInput.dataset.node = sNode.id;
+}
+
+function clickChart(event) {
+  if (!closest(event.target, el => el.classList && el.classList.contains('node'))) {
+    document.getElementById('selected-node').textContent = '';
+  }
+}
+
+function toggleViewState() {
+  let chart = document.querySelector('.orgchart');
+  chart.classList.toggle('view-state', this.value !== 'view');
+  document.getElementById('edit-panel').classList.toggle('view-state', this.value === 'view');
+  if (this.value === 'edit') {
+    removeClass(Array.from(chart.querySelector('tr')), 'hidden');
+    removeClass(Array.from(chart.querySelector('td')), 'hidden');
+    removeClass(Array.from(chart.querySelector('.node')), 'slide-up slide-down slide-right slide-left');
+  } else {
+    document.getElementById('btn-reset').click();
+  }
+}
+
+function toggleNodeType() {
+  if (this.value === 'parent') {
+    document.getElementById('edit-panel').classList.add('edit-parent-node');
+    Array.from(document.getElementById('new-nodelist').children)
+      .slice(1).forEach(newNode => newNode.remove());
+  } else {
+    document.getElementById('edit-panel').classList.remove('edit-parent-node');
+  }
+}
+
+function addInputs() {
+  let newNode = document.createElement('li');
+
+  newNode.innerHTML = `<input type="text" class="new-node">`;
+  document.getElementById('new-nodelist').appendChild(newNode);
+}
+
+function removeInputs() {
+  let inputs = Array.from(document.getElementById('new-nodelist').children);
+
+  if (inputs.length > 1) {
+    inputs.pop().remove();
+  }
+}
+
+function addNodes(orgchart) {
+  let chartContainer = document.getElementById('chart-container'),
+    nodeVals = [];
+
+  Array.from(document.getElementById('new-nodelist').querySelectorAll('.new-node'))
+    .forEach(item => {
+      let validVal = item.value.trim();
+        
+      if (validVal) {
+        nodeVals.push(validVal);
+      }
+    });
+  let selectedNode = document.getElementById(document.getElementById('selected-node').dataset.node);
+
+  if (!nodeVals.length) {
+    alert('Please input value for new node');
+    return;
+  }
+  let nodeType = document.querySelector('input[name="node-type"]:checked');
+
+  if (!nodeType) {
+    alert('Please select a node type');
+    return;
+  }
+  if (nodeType.value !== 'parent' && !document.querySelector('.orgchart')) {
+    alert('Please creat the root node firstly when you want to build up the orgchart from the scratch');
+    return;
+  }
+  if (nodeType.value !== 'parent' && !selectedNode) {
+    alert('Please select one node in orgchart');
+    return;
+  }
+
+  if (nodeType.value === 'parent') {
+    if (!chartContainer.children.length) {// if the original chart has been deleted
+      orgchart = new OrgChart({
+        'chartContainer': '#chart-container',
+        'data' : { 'name': nodeVals[0] },
+        'exportButton': true,
+        'exportFilename': 'SportsChart',
+        'parentNodeSymbol': 'fa-th-large',
+        'createNode': function(node, data) {
+          node.id = getId();
+        }
+      });
+      orgchart.chart.classList.add('view-state');
+    } else {
+      orgchart.addParent(chartContainer.querySelector('.node'), { 'name': nodeVals[0], 'Id': getId() });
+    }
+  } else if (nodeType.value === 'siblings') {
+    orgchart.addSiblings(selectedNode, {
+      'siblings': nodeVals.map(item => {
+        return { 'name': item, 'relationship': '110', 'Id': getId() };
+      })
+    });
+  } else {
+    let hasChild = selectedNode.parentNode.colSpan > 1;
+
+    if (!hasChild) {
+      let rel = nodeVals.length > 1 ? '110' : '100';
+
+      orgchart.addChildren(selectedNode, {
+        'children': nodeVals.map(item => {
+          return { 'name': item, 'relationship': rel, 'Id': getId() };
+        })
+      });
+    } else {
+      orgchart.addSiblings(closest(selectedNode, el => el.nodeName === 'TABLE').querySelector('.nodes').querySelector('.node'),
+        { 'siblings': nodeVals.map(function(item) { return { 'name': item, 'relationship': '110', 'Id': getId() }; })
+      });
+    }
+  }
+}
+
+function deleteNodes() {
+  let  sNodeInput = document.getElementById('selected-node'),
+    sNode = sNodeInput.data('node');
+
+  if (!selectedNode) {
+    alert('Please select one node in orgchart');
+    return;
+  } else if (sNode === document.querySelector('.orgchart').querySelector('.node')) {
+    if (!window.confirm('Are you sure you want to delete the whole chart?')) {
+      return;
+    }
+  }
+  orgchart.removeNodes(sNode);
+  sNodeInput.value = '';
+  sNodeInput.dataset.node = '';
+}
+
+function resetPanel() {
+  let fNode = document.querySelector('.orgchart').querySelector('.focused');
+
+  if (fNode) {
+    fNode.classList.remove('focused');
+  }
+  document.getElementById('selected-node').value = '';
+  document.getElementById('new-nodelist').querySelector('input').value = '';
+  Array.from(document.getElementById('new-nodelist').children).slice(1).forEach(item => item.remove());
+  document.getElementById('node-type-panel').querySelectorAll('input').forEach(item => {
+    item.checked = false;
+  });
+}
+
+function getId() {
+  return (new Date().getTime()) * 1000 + Math.floor(Math.random() * 1001);
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  let orgchart,
+    datascource = {
       'name': 'Ball game',
       'children': [
         { 'name': 'Football' },
@@ -13,146 +211,25 @@
       ]
     };
 
-    var getId = function() {
-      return (new Date().getTime()) * 1000 + Math.floor(Math.random() * 1001);
-    };
-
-    $('#chart-container').orgchart({
-      'data' : datascource,
-      'exportButton': true,
-      'exportFilename': 'SportsChart',
-      'parentNodeSymbol': 'fa-th-large',
-      'createNode': function($node, data) {
-        $node[0].id = getId();
-      }
-    })
-    .on('click', '.node', function() {
-      var $this = $(this);
-      $('#selected-node').val($this.find('.title').text()).data('node', $this);
-    })
-    .on('click', '.orgchart', function(event) {
-      if (!$(event.target).closest('.node').length) {
-        $('#selected-node').val('');
-      }
-    });
-
-    $('input[name="chart-state"]').on('click', function() {
-      $('.orgchart').toggleClass('view-state', this.value !== 'view');
-      $('#edit-panel').toggleClass('view-state', this.value === 'view');
-      if ($(this).val() === 'edit') {
-        $('.orgchart').find('tr').removeClass('hidden')
-          .find('td').removeClass('hidden')
-          .find('.node').removeClass('slide-up slide-down slide-right slide-left');
-      } else {
-        $('#btn-reset').trigger('click');
-      }
-    });
-
-    $('input[name="node-type"]').on('click', function() {
-      var $this = $(this);
-      if ($this.val() === 'parent') {
-        $('#edit-panel').addClass('edit-parent-node');
-        $('#new-nodelist').children(':gt(0)').remove();
-      } else {
-        $('#edit-panel').removeClass('edit-parent-node');
-      }
-    });
-
-    $('#btn-add-input').on('click', function() {
-      $('#new-nodelist').append('<li><input type="text" class="new-node"></li>');
-    });
-
-    $('#btn-remove-input').on('click', function() {
-      var inputs = $('#new-nodelist').children('li');
-      if (inputs.length > 1) {
-        inputs.last().remove();
-      }
-    });
-
-    $('#btn-add-nodes').on('click', function() {
-      var $chartContainer = $('#chart-container');
-      var nodeVals = [];
-      $('#new-nodelist').find('.new-node').each(function(index, item) {
-        var validVal = item.value.trim();
-        if (validVal.length) {
-          nodeVals.push(validVal);
-        }
-      });
-      var $node = $('#selected-node').data('node');
-      if (!nodeVals.length) {
-        alert('Please input value for new node');
-        return;
-      }
-      var nodeType = $('input[name="node-type"]:checked');
-      if (!nodeType.length) {
-        alert('Please select a node type');
-        return;
-      }
-      if (nodeType.val() !== 'parent' && !$('.orgchart').length) {
-        alert('Please creat the root node firstly when you want to build up the orgchart from the scratch');
-        return;
-      }
-      if (nodeType.val() !== 'parent' && !$node) {
-        alert('Please select one node in orgchart');
-        return;
-      }
-      if (nodeType.val() === 'parent') {
-        if (!$chartContainer.children().length) {// if the original chart has been deleted
-          $chartContainer.orgchart({
-            'data' : { 'name': nodeVals[0] },
-            'exportButton': true,
-            'exportFilename': 'SportsChart',
-            'parentNodeSymbol': 'fa-th-large',
-            'createNode': function($node, data) {
-              $node[0].id = getId();
-            }
-          })
-          .find('.orgchart').addClass('view-state');
-        } else {
-          $chartContainer.orgchart('addParent', $chartContainer.find('.node:first'), { 'name': nodeVals[0], 'Id': getId() });
-        }
-      } else if (nodeType.val() === 'siblings') {
-        $chartContainer.orgchart('addSiblings', $node,
-          { 'siblings': nodeVals.map(function(item) { return { 'name': item, 'relationship': '110', 'Id': getId() }; })
-        });
-      } else {
-        var hasChild = $node.parent().attr('colspan') > 0 ? true : false;
-        if (!hasChild) {
-          var rel = nodeVals.length > 1 ? '110' : '100';
-          $chartContainer.orgchart('addChildren', $node, {
-              'children': nodeVals.map(function(item) {
-                return { 'name': item, 'relationship': rel, 'Id': getId() };
-              })
-            }, $.extend({}, $chartContainer.find('.orgchart').data('options'), { depth: 0 }));
-        } else {
-          $chartContainer.orgchart('addSiblings', $node.closest('tr').siblings('.nodes').find('.node:first'),
-            { 'siblings': nodeVals.map(function(item) { return { 'name': item, 'relationship': '110', 'Id': getId() }; })
-          });
-        }
-      }
-    });
-
-    $('#btn-delete-nodes').on('click', function() {
-      var $node = $('#selected-node').data('node');
-      if (!$node) {
-        alert('Please select one node in orgchart');
-        return;
-      } else if ($node[0] === $('.orgchart').find('.node:first')[0]) {
-        if (!window.confirm('Are you sure you want to delete the whole chart?')) {
-          return;
-        }
-      }
-      $('#chart-container').orgchart('removeNodes', $node);
-      $('#selected-node').val('').data('node', null);
-    });
-
-    $('#btn-reset').on('click', function() {
-      $('.orgchart').find('.focused').removeClass('focused');
-      $('#selected-node').val('');
-      $('#new-nodelist').find('input:first').val('').parent().siblings().remove();
-      $('#node-type-panel').find('input').prop('checked', false);
-    });
-
+  orgchart = new OrgChart({
+    'chartContainer': '#chart-container',
+    'data' : datascource,
+    'exportButton': true,
+    'exportFilename': 'SportsChart',
+    'parentNodeSymbol': 'fa-th-large',
+    'createNode': function(node, data) {
+      node.id = getId();
+    }
   });
 
-})(jQuery);
+  bindEventHandler('.node', 'click', clickNode, '#chart-container');
+  bindEventHandler('.orgchart', 'click', clickChart, '#chart-container');
+  bindEventHandler('input[name="chart-state"]', 'click', toggleViewState);
+  bindEventHandler('input[name="node-type"]', 'click', toggleNodeType);
+  document.getElementById('btn-add-input').addEventListener('click', addInputs);
+  document.getElementById('btn-remove-input').addEventListener('click', removeInputs);
+  document.getElementById('btn-add-nodes').addEventListener('click', () => addNodes(orgchart));
+  document.getElementById('btn-delete-nodes').addEventListener('click', deleteNodes);
+  document.getElementById('btn-reset').addEventListener('click', resetPanel);
+
+});

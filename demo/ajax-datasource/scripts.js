@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
     });
   Mock.setup({ timeout: 1000 });
 
-  let  orgchart = new OrgChart({
+  let orgchart = new OrgChart({
     'chartContainer': '#chart-container',
     'data' : '/orgchart/initdata',
     'depth': 2,

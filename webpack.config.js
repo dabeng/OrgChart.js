@@ -6,6 +6,7 @@ module.exports = {
     'direction/bundle-l2r': './demo/direction/l2r.js',
     'direction/bundle-r2l': './demo/direction/r2l.js',
     'drag-drop/bundle': './demo/drag-drop/scripts.js',
+    'edit-orgchart/bundle': './demo/edit-orgchart/scripts.js',
     'export-orgchart/bundle': './demo/export-orgchart/scripts.js',
     'get-hierarchy/bundle': './demo/get-hierarchy/scripts.js',
     'integrate-map/bundle': './demo/integrate-map/scripts.js',
