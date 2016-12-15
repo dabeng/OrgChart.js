@@ -906,10 +906,12 @@ export default class OrgChart {
               .lastChild.children);
 
             if (existingSibligCount > 1) {
-              Array.from(nodeChart.parentNode.children).forEach((el) => {
+              let temp = nodeChart.parentNode.parentNode;
+
+              Array.from(temp.children).forEach((el) => {
                 siblingTds[0].parentNode.insertBefore(el, siblingTds[0]);
               });
-              nodeChart.parentNode.parentNode.remove();
+              temp.remove();
               that._complementLine(siblingTds[0], siblingCount, existingSibligCount);
               that._addClass(siblingTds, 'hidden');
               siblingTds.forEach((el) => {

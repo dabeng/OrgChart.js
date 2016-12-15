@@ -94,14 +94,14 @@ gulp.task('webpack', ['build'], function () {
 
 gulp.task('serve', ['copyVendorAssets', 'webpack'], function () {
   browserSync.init({
-    files: ['demo/**/*.html', 'demo/**/*.css', '!demo/css/vendor/*.css'],
+    files: ['src/*.css', 'demo/**/*.html', 'demo/**/*.css', '!demo/css/vendor/*.css'],
     server: 'demo',
     socket: {
       domain: 'localhost:3000'
     }
   });
 
-  gulp.watch('build/js/*').on('change', ['webpack']);
+  gulp.watch('src/*.js', ['webpack']);
 
   gulp.watch('demo/js/*').on('change', browserSync.reload);
 
