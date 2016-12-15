@@ -518,7 +518,7 @@
 	      var n = this;this.chart.dataset.inEdit = "addSiblings", this._buildSiblingNode.call(this, this._closest(e, function (e) {
 	        return "TABLE" === e.nodeName;
 	      }), t, function () {
-	        if (n._closest(e, function (e) {
+	        if (console.log("O"), n._closest(e, function (e) {
 	          return e.classList && e.classList.contains("nodes");
 	        }).dataset.siblingsLoaded = !0, !e.querySelector(".leftEdge")) {
 	          var t = document.createElement("i"),

@@ -963,6 +963,7 @@ export default class OrgChart {
 
     this.chart.dataset.inEdit = 'addSiblings';
     this._buildSiblingNode.call(this, this._closest(node, (el) => el.nodeName === 'TABLE'), data, () => {
+      console.log('O');
       that._closest(node, (el) => el.classList && el.classList.contains('nodes'))
         .dataset.siblingsLoaded = true;
       if (!node.querySelector('.leftEdge')) {

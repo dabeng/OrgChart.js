@@ -101,6 +101,8 @@ gulp.task('serve', ['copyVendorAssets', 'webpack'], function () {
     }
   });
 
+  gulp.watch('build/js/*').on('change', ['webpack']);
+
   gulp.watch('demo/js/*').on('change', browserSync.reload);
 
   gulp.watch(['demo/**/*.js', '!demo/js/*', '!demo/js/vendor/*', '!demo/**/bundle*.js']).on('change', function(file) {
