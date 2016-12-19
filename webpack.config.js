@@ -16,7 +16,8 @@ module.exports = {
     'option-createNode/bundle': './demo/option-createNode/scripts.js',
     'pan-zoom/bundle': './demo/pan-zoom/scripts.js',
     'toggle-sibs-resp/bundle': './demo/toggle-sibs-resp/scripts.js',
-    'ul-datasource/bundle': './demo/ul-datasource/scripts.js'
+    'ul-datasource/bundle': './demo/ul-datasource/scripts.js',
+    'vertical-depth/bundle': './demo/vertical-depth/scripts.js'
   },
   output: {
     path: './demo/',

@@ -27,7 +27,9 @@
   display: none;
 }
 
-.orgchart div, .orgchart div:before, .orgchart div:after {
+.orgchart div,
+.orgchart div::before,
+.orgchart div::after {
   -webkit-box-sizing: border-box;
   -moz-box-sizing: border-box;
   box-sizing: border-box;
@@ -55,7 +57,62 @@
 .orgchart .verticalNodes ul {
   list-style: none;
   margin: 0;
-  padding-left: 24px;
+  padding-left: 18px;
+  text-align: left;
+}
+
+.orgchart .verticalNodes ul:first-child {
+  margin-top: 3px;
+}
+
+.orgchart .verticalNodes>td::before {
+  content: '';
+  border: 1px solid rgba(217, 83, 79, 0.8);
+}
+
+.orgchart .verticalNodes>td>ul>li:first-child::before {
+  top: -4px;
+  height: 30px;
+  width: calc(50% - 2px);
+  border-width: 2px 0 0 2px;
+}
+
+.orgchart .verticalNodes ul>li {
+  position: relative;
+}
+
+.orgchart .verticalNodes ul>li::before,
+.orgchart .verticalNodes ul>li::after {
+  content: '';
+  position: absolute;
+  left: -6px;
+  border-color: rgba(217, 83, 79, 0.8);
+  border-style: solid;
+  border-width: 0 0 2px 2px;
+  -webkit-box-sizing: border-box;
+  -moz-box-sizing: border-box;
+  box-sizing: border-box;
+}
+
+.orgchart .verticalNodes ul>li::before {
+  top: -4px;
+  height: 30px;
+  width: 11px;
+}
+
+.orgchart .verticalNodes ul>li::after {
+  top: 1px;
+  height: 100%;
+}
+
+.orgchart .verticalNodes ul>li:first-child::after {
+  top: 24px;
+  width: 11px;
+  border-width: 2px 0 0 2px;
+}
+
+.orgchart .verticalNodes ul>li:last-child::after {
+  border-width: 2px 0 0;
 }
 
 .orgchart.r2l {
@@ -341,8 +398,8 @@
 
 .orgchart .node .toggleBtn {
   position: absolute;
-  left: -9px;
-  bottom: 16px;
+  left: 5px;
+  bottom: -2px;
   color: rgba(68, 157, 68, 0.6);
 }
 
