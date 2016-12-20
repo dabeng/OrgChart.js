@@ -1,0 +1,48 @@
+{
+  "name": "OrgChart.js",
+  "version": "0.0.2",
+  "description": "organization chart plugin based on ES6",
+  "main": "lib/orgchart.js",
+  "scripts": {},
+  "devDependencies": {
+    "babel-core": "^6.18.2",
+    "babel-loader": "^6.2.8",
+    "babel-preset-es2015": "^6.18.0",
+    "browser-sync": "^2.18.2",
+    "del": "^2.2.2",
+    "gulp": "^3.9.1",
+    "gulp-babel": "^6.1.2",
+    "gulp-clean-css": "^2.2.0",
+    "gulp-csslint": "^1.0.0",
+    "gulp-eslint": "^3.0.1",
+    "gulp-plumber": "^1.1.0",
+    "gulp-rename": "^1.2.2",
+    "gulp-sourcemaps": "^1.9.1",
+    "gulp-uglify": "^2.0.0",
+    "gulp-util": "^3.0.7",
+    "merge-stream": "^1.0.1",
+    "run-sequence": "^1.2.2",
+    "webpack": "^1.14.0"
+  },
+  "dependencies": {
+    "font-awesome": "^4.7.0",
+    "html2canvas": "^0.5.0-beta4",
+    "mockjs": "^1.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dabeng/OrgChart.js.git"
+  },
+  "keywords": [
+    "es6",
+    "ES2015",
+    "organization chart",
+    "tree-like"
+  ],
+  "author": "dabeng",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/dabeng/OrgChart.js/issues"
+  },
+  "homepage": "https://github.com/dabeng/OrgChart.js"
+}

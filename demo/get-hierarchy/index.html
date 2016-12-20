@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <title>Organization Chart Class</title>
+
+  <link rel="icon" type="image/x-icon" href="../img/logo.jpg">
+  <link rel="stylesheet" href="../css/vendor/font-awesome.min.css">
+  <link rel="stylesheet" href="../css/orgchart.min.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <ul id="ul-data" style="display: none;">
+    <li id="1">Lao Lao
+      <ul>
+        <li id="2">Bo Miao</li>
+        <li id="3">Su Miao
+          <ul>
+            <li id="4">Tie Hua</li>
+            <li id="5">Hei Hei
+              <ul>
+                <li id="6">Pang Pang</li>
+                <li id="7">Xiang Xiang</li>
+              </ul>
+            </li>
+          </ul>
+        </li>
+      </ul>
+    </li>
+  </ul>
+  <div id="chart-container"></div>
+  <button id="btn-export-hier">Export Hierarchy</button>
+
+  <script type="text/javascript" src="bundle.js"></script>
+  </body>
+</html>

@@ -1,0 +1,32 @@
+#wrapper {
+  width: 860px;
+  margin: 0 auto;
+  font-family: "Arial";
+}
+
+#wrapper li {
+  margin-top: 20px;
+}
+
+#wrapper a {
+  font-size: 24px;
+}
+
+#wrapper span {
+  font-size: 24px;
+}
+
+#chart-container {
+  position: relative;
+  display: inline-block;
+  top: 10px;
+  left: 10px;
+  height: 420px;
+  width: calc(100% - 24px);
+  border: 2px dashed #aaa;
+  border-radius: 5px;
+  overflow: auto;
+  text-align: center;
+  font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  font-size: 14px;
+}
