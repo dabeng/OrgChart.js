@@ -59,7 +59,7 @@ let orgchart = new OrgChart({
 ```
 ![ul datasource](http://dabeng.github.io/OrgChart.js/ul-datasource/snapshot.png)
 
-- **using local datasource**
+- **[using local datasource](http://dabeng.github.io/OrgChart.js/local-datasource/)**
 ```js
 let datascource = {
   'name': 'Lao Lao',
@@ -94,7 +94,7 @@ orgchart = new OrgChart({
 ```
 ![local datasource](http://dabeng.github.io/OrgChart.js/local-datasource/recorder.gif)
 
-- **I wanna pan&zoom the orgchart**
+- **[I wanna pan&zoom the orgchart](http://dabeng.github.io/OrgChart.js/pan-zoom/)**
 
 ![pan & zoom](http://dabeng.github.io/OrgChart.js/pan-zoom/recorder.gif)
 
@@ -102,7 +102,7 @@ orgchart = new OrgChart({
 
   Top to Bottom -- default direction, as you can see all other examples on this page.
 
-  Bottom to Top
+  [Bottom to Top](http://dabeng.github.io/OrgChart.js/direction/bottom2top)
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -114,7 +114,7 @@ let orgchart = new OrgChart({
 ```
 ![Bottom to Top](http://dabeng.github.io/OrgChart.js/direction/b2t.png)
 
-  Left to Right
+  [Left to Right](http://dabeng.github.io/OrgChart.js/direction/left2right)
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -126,7 +126,7 @@ let orgchart = new OrgChart({
 ```
 ![Left to Right](http://dabeng.github.io/OrgChart.js/direction/l2r.png)
 
-  Right to Left
+  [Right to Left](http://dabeng.github.io/OrgChart.js/direction/right2left)
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -138,7 +138,7 @@ let orgchart = new OrgChart({
 ```
 ![Right to Left](http://dabeng.github.io/OrgChart.js/direction/r2l.png)
 
-- **I wanna show/hide left/right sibling nodes respectively by clicking left/right arrow**
+- **[I wanna show/hide left/right sibling nodes respectively by clicking left/right arrow](http://dabeng.github.io/OrgChart.js/toggle-sibs-resp/)**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -150,7 +150,7 @@ let orgchart = new OrgChart({
 ```
 ![toggle siblings respectively](http://dabeng.github.io/OrgChart.js/toggle-sibs-resp/recorder.gif)
 
-- **I wanna load datasource through ajax**
+- **[I wanna load datasource through ajax](http://dabeng.github.io/OrgChart.js/ajax-datasource/)**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -162,7 +162,7 @@ let orgchart = new OrgChart({
 ```
 ![ajax datasource](http://dabeng.github.io/OrgChart.js/ajax-datasource/recorder.gif)
 
-- **I wanna load data on-demand**
+- **[I wanna load data on-demand](http://dabeng.github.io/OrgChart.js/ondemand-loading-data/)**
 
 Note: when users use ajaxURL option to build orghchart, they must use json datasource(both local and remote are OK) and set the relationship property of datasource by themselves. All of these staff are used to generate the correct expanding/collapsing arrows for nodes.
 ```js
@@ -197,7 +197,7 @@ orgchart = new OrgChart({
 ```
 ![on-demand loading data](http://dabeng.github.io/OrgChart.js/ondemand-loading-data/recorder.gif)
 
-- **I wanna customize the structure of node**
+- **[I wanna customize the structure of node](http://dabeng.github.io/OrgChart.js/option-createNode/)**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -223,7 +223,7 @@ let orgchart = new OrgChart({
 ```
 ![option--createNode](http://dabeng.github.io/OrgChart.js/option-createNode/recorder.gif)
 
-- **I wanna export the organization chart as a picture**
+- **[I wanna export the organization chart as a picture](http://dabeng.github.io/OrgChart.js/export-orgchart/)**
 
 Here, we need the help from [html2canvas](https://github.com/niklasvh/html2canvas).
 ```js
@@ -239,7 +239,7 @@ let orgchart = new OrgChart({
 ```
 ![export orgchart](http://dabeng.github.io/OrgChart.js/export-orgchart/recorder.gif)
 
-- **I wanna itegrate organization chart with geographic information**
+- **[I wanna itegrate organization chart with geographic information](http://dabeng.github.io/OrgChart.js/integrate-map/)**
 
 Here, we fall back on [OpenLayers](https://github.com/openlayers/ol3). It's the most aewsome open-source js library for Web GIS you sholdn't miss.
 ```js
@@ -311,7 +311,7 @@ orgchart = new OrgChart({
 ```
 ![integrate map](http://dabeng.github.io/OrgChart.js/integrate-map/recorder.gif)
 
-- **I wanna edit orgchart**
+- **[I wanna edit orgchart](http://dabeng.github.io/OrgChart.js/edit-orgchart/)**
 
 With the help of exposed core methods(addParent(), addSiblings(), addChildren(), removeNodes()) of orgchart plugin, we can finish this task easily.
 ```js
@@ -419,7 +419,7 @@ document.addEventListener('DOMContentLoaded', function () {
 ```
 ![edit orgchart](http://dabeng.github.io/OrgChart.js/edit-orgchart/recorder.gif)
 
-- **I wanna drag & drop the nodes of orgchart**
+- **[I wanna drag & drop the nodes of orgchart](http://dabeng.github.io/OrgChart.js/drag-drop/)**
 
 Users are allowed to drag & drop the nodes of orgchart when option "draggable" is assigned to true(**Note**: this feature doesn't work on IE due to its poor support for HTML5 drag & drop API).
 
@@ -443,7 +443,7 @@ let orgchart = new OrgChart({
 });
 ```
 
-- **I want a method that can decribe the hierarchy of orgchart**
+- **[I want a method that can decribe the hierarchy of orgchart](http://dabeng.github.io/OrgChart.js/get-hierarchy/)**
 
 That's where getHierarchy() comes in.
 ```html
@@ -484,7 +484,7 @@ document.querySelector('#btn-export-hier').addEventListener('click', () => {
 ```
 ![get hierarchy](http://dabeng.github.io/OrgChart.js/get-hierarchy/snapshot.png)
 
-- **I want a color-coded chart**
+- **[I want a color-coded chart](http://dabeng.github.io/OrgChart.js/color-coded/)**
 
 It's a so easy task, we just need to append id or className property to node data.
 ```js
@@ -523,13 +523,13 @@ let datasource = {
 ```
 ![color coded](http://dabeng.github.io/OrgChart.js/color-coded/snapshot.png)
 
-- **I want a multiple-layers chart**
+- **[I want a multiple-layers chart](http://dabeng.github.io/OrgChart.js/multiple-layers/)**
 
 In fact, this is a wonderful solution to display a orgchart which includes a huge number of node data.
 
 ![multiple layers](http://dabeng.github.io/OrgChart.js/multiple-layers/recorder.gif)
 
-- **I want a hybrid(horizontal + vertical) chart**
+- **[I want a hybrid(horizontal + vertical) chart](http://dabeng.github.io/OrgChart.js/vertical-depth/)**
 
 This feature is inspired by the issues([Aligning Children Vertical](https://github.com/dabeng/OrgChart/issues/46), [Hybrid(horizontal + vertical) OrgChart](https://github.com/dabeng/OrgChart/issues/61)). Thank [mfahadi](https://github.com/mfahadi) and [Destructrix](https://github.com/Destructrix) for their constructive suggestions:blush:
 
