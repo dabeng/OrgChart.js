@@ -575,7 +575,7 @@ export default class OrgChart {
     }, this);
   }
   // recursively hide the ancestor node and sibling nodes of the specified node
-  hideAncestorsSiblings(node) {
+  hideParent(node) {
     let temp = Array.from(this._closest(node, function (el) {
       return el.classList.contains('nodes');
     }).parentNode.children).slice(0, 3);
@@ -605,7 +605,7 @@ export default class OrgChart {
     }
     // if the current node has the parent node, hide it recursively
     if (parent && grandfatherVisible) {
-      this.hideAncestorsSiblings(parent);
+      this.hideParent(parent);
     }
   }
   // exposed method
@@ -680,7 +680,7 @@ export default class OrgChart {
       if (parent.classList.contains('slide')) { return; }
       // hide the ancestor nodes and sibling nodes of the specified node
       if (parentState.visible) {
-        this.hideAncestorsSiblings(node);
+        this.hideParent(node);
         this._one(parent, 'transitionend', function () {
           if (this._isInAction(node)) {
             this._switchVerticalArrow(topEdge);
@@ -716,7 +716,7 @@ export default class OrgChart {
     }
   }
   // recursively hide the descendant nodes of the specified node
-  hideDescendants(node) {
+  hideChildren(node) {
     let that = this,
       temp = this._nextAll(node.parentNode.parentNode),
       lastItem = temp[temp.length - 1],
@@ -755,7 +755,7 @@ export default class OrgChart {
     this._addClass(descendants, 'slide slide-up');
   }
   // show the children nodes of the specified node
-  showDescendants(node) {
+  showChildren(node) {
     let that = this,
       temp = this._nextAll(node.parentNode.parentNode),
       descendants = [];
@@ -814,7 +814,7 @@ export default class OrgChart {
           symbol.setAttribute('class', 'fa ' + opts.parentNodeSymbol + ' symbol');
           node.querySelector(':scope > .title').appendChild(symbol);
         }
-        that.showDescendants(node);
+        that.showChildren(node);
         that.chart.dataset.inEdit = '';
       }
     });
@@ -838,9 +838,9 @@ export default class OrgChart {
       })) { return; }
       // hide the descendant nodes of the specified node
       if (childrenState.visible) {
-        this.hideDescendants(node);
+        this.hideChildren(node);
       } else { // show the descendants
-        this.showDescendants(node);
+        this.showChildren(node);
       }
     } else { // load the new children nodes of the specified node by ajax request
       let nodeId = bottomEdge.parentNode.id;
@@ -966,7 +966,6 @@ export default class OrgChart {
 
     this.chart.dataset.inEdit = 'addSiblings';
     this._buildSiblingNode.call(this, this._closest(node, (el) => el.nodeName === 'TABLE'), data, () => {
-      console.log('O');
       that._closest(node, (el) => el.classList && el.classList.contains('nodes'))
         .dataset.siblingsLoaded = true;
       if (!node.querySelector('.leftEdge')) {
@@ -981,6 +980,26 @@ export default class OrgChart {
       that.showSiblings(node);
       that.chart.dataset.inEdit = '';
     });
+  }
+  removeNodes(node) {
+    let parent = this._closest(node, el => el.nodeName === 'TABLE').parentNode,
+      sibs = this._siblings(parent.parentNode);
+
+    if (parent.nodeName === 'TD') {
+      if (this._getNodeState(node, 'siblings').exist) {
+        sibs[2].querySelector('.topLine').nextElementSibling.remove();
+        sibs[2].querySelector('.topLine').remove();
+        sibs[0].children[0].setAttribute('colspan', sibs[2].children.length);
+        sibs[1].children[0].setAttribute('colspan', sibs[2].children.length);
+        parent.remove();
+      } else {
+        sibs[0].children[0].removeAttribute('colspan');
+        sibs[0].querySelector('.bottomEdge').remove();
+        this._siblings(sibs[0]).forEach(el => el.remove());
+      }
+    } else {
+      Array.from(parent.parentNode.children).forEach(el => el.remove());
+    }
   }
   // bind click event handler for the left and right edges
   _clickHorizontalEdge(event) {

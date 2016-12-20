@@ -58,9 +58,9 @@ function toggleViewState() {
   chart.classList.toggle('view-state', this.value !== 'view');
   document.getElementById('edit-panel').classList.toggle('view-state', this.value === 'view');
   if (this.value === 'edit') {
-    removeClass(Array.from(chart.querySelector('tr')), 'hidden');
-    removeClass(Array.from(chart.querySelector('td')), 'hidden');
-    removeClass(Array.from(chart.querySelector('.node')), 'slide-up slide-down slide-right slide-left');
+    removeClass(Array.from(chart.querySelectorAll('tr')), 'hidden');
+    removeClass(Array.from(chart.querySelectorAll('td')), 'hidden');
+    removeClass(Array.from(chart.querySelectorAll('.node')), 'slide-up slide-down slide-right slide-left');
   } else {
     document.getElementById('btn-reset').click();
   }
@@ -165,11 +165,11 @@ function addNodes(orgchart) {
   }
 }
 
-function deleteNodes() {
+function deleteNodes(orgchart) {
   let  sNodeInput = document.getElementById('selected-node'),
-    sNode = sNodeInput.data('node');
+    sNode = document.getElementById(sNodeInput.dataset.node);
 
-  if (!selectedNode) {
+  if (!sNode) {
     alert('Please select one node in orgchart');
     return;
   } else if (sNode === document.querySelector('.orgchart').querySelector('.node')) {
@@ -229,7 +229,7 @@ document.addEventListener('DOMContentLoaded', function () {
   document.getElementById('btn-add-input').addEventListener('click', addInputs);
   document.getElementById('btn-remove-input').addEventListener('click', removeInputs);
   document.getElementById('btn-add-nodes').addEventListener('click', () => addNodes(orgchart));
-  document.getElementById('btn-delete-nodes').addEventListener('click', deleteNodes);
+  document.getElementById('btn-delete-nodes').addEventListener('click', () => deleteNodes(orgchart));
   document.getElementById('btn-reset').addEventListener('click', resetPanel);
 
 });
