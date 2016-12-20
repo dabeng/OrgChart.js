@@ -649,3 +649,206 @@ let orgchart = new OrgChart(options);
     </tr>
   </tbody>
 </table>
+
+### Methods
+I'm sure that you can grasp the key points of the methods below after you try out demo -- [edit orgchart](http://dabeng.github.io/OrgChart.js/edit-orgchart/).
+##### let orgchart = new OrgChart(options);
+Embeds an organization chart in designated container. Accepts an options object and you can go through the "options" section to find which options are required.
+##### .addParent(root, data)
+Adds parent node(actullay it's always root node) for current orgchart.
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>root</td><td>dom node</td><td>yes</td><td>root node of designated orgchart</td><td>options used for overriding initial options</td></tr>
+    <tr><td>data</td><td>json object</td><td>yes</td><td></td><td>datasource for building root node</td></tr>
+  </tbody>
+</table>
+##### .addSiblings(node, data)
+Adds sibling nodes for designated node.
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>node</td><td>dom node</td><td>yes</td><td></td><td>we'll add sibling nodes based on this node</td></tr>
+    <tr><td>data</td><td>json object</td><td>yes</td><td></td><td>datasource for building sibling nodes</td></tr>
+  </tbody>
+</table>
+##### .addChildren(node, data）
+Adds child nodes for designed node.
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>node</td><td>dom node</td><td>yes</td><td></td><td>we'll add child nodes based on this node</td></tr>
+    <tr><td>data</td><td>json object</td><td>yes</td><td></td><td>datasource for building child nodes</td></tr>
+  </tbody>
+</table>
+##### .removeNodes(node）
+Removes the designated node and its descedant nodes.
+<table>
+  <thead>
+    <tr><th>Name</th><th>Type</th><th>Required</th><th>Default</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>node</td><td>dom node</td><td>yes</td><td></td><td>node to be removed</td></tr>
+  </tbody>
+</table>
+##### .getHierarchy()
+This method is designed to get the hierarchy relationships of orgchart for further processing. For example, after editing the orgchart, you could send the returned value of this method to server-side and save the new state of orghcart.
+##### .hideChildren(node)
+This method allows you to hide programatically the children of any specific node(.node element), if it has
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired dom node that we'll hide its children nodes</td>
+  </tr>
+</table>
+##### .showChildren(node)
+This method allows you to show programatically the children of any specific node(.node element), if it has
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired dom node that we'll show its children nodes</td>
+  </tr>
+</table>
+##### .hideSiblings(node, direction)
+This method allows you to hide programatically the siblings of any specific node(.node element), if it has
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired dom node that we'll hide its siblings nodes</td>
+  </tr>
+  <tr>
+    <td>direction</td>
+    <td>string</td>
+    <td>No</td>
+    <td>None</td>
+    <td>Possible values:"left","rigth". Specifies if hide the siblings at left or rigth. If not defined hide both of them.</td>
+  </tr>
+</table>
+##### .showSiblings(node, direction)
+This method allows you to show programatically the siblings of any specific node(.node element), if it has
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired dom node that we'll show its siblings nodes</td>
+  </tr>
+  <tr>
+    <td>direction</td>
+    <td>string</td>
+    <td>No</td>
+    <td>None</td>
+    <td>Possible values:"left","rigth". Specifies if hide the siblings at left or rigth. If not defined hide both of them.</td>
+  </tr>
+</table>
+##### .getNodeState(node, relation)
+This method returns you the display state of the related nodes.
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired dom node that we wanna know its related nodes' display state.</td>
+  </tr>
+  <tr>
+    <td>relation</td>
+    <td>String</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>Possible values: "parent", "children" and "siblings". Specifies the desired relation to return.</td>
+  </tr>
+</table>
+The returning object will have the next structure:
+```js
+{
+  "exists": true|false,  //Indicates if has parent|children|siblings
+  "visible":true|false,  //Indicates if the related nodes are visible
+}
+```
+##### .getRelatedNodes(node, relation)
+This method returns you the nodes related to the specified node
+<table>
+  <tr>
+    <th>Name</th>
+    <th>Type</th>
+    <th>Required</th>
+    <th>Default</th>
+    <th>Description</th>
+  </tr>
+  <tr>
+    <td>node</td>
+    <td>dom node</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>It's the desired that we wanna get its related nodes</td>
+  </tr>
+  <tr>
+    <td>relation</td>
+    <td>String</td>
+    <td>Yes</td>
+    <td>None</td>
+    <td>Possible values: "parent", "children" and "siblings". Specifies the desired relation to return.</td>
+  </tr>
+</table>
+
+### Events
+<table>
+  <thead>
+    <tr><th>Event Type</th><th>Attached Data</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>nodedropped.orgchart</td><td>draggedNode, dragZone, dropZone</td><td>The event's handler is where you can place your customized function after node drop over. For more details, please refer to <a target="_blank" href="http://dabeng.github.io/OrgChart.js/drag-drop/">example drag & drop</a>.</td></tr>
+  </tbody>
+</table>
