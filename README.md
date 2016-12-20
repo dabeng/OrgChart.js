@@ -29,7 +29,7 @@ Now, you can try out all the demos on http://localhost:3000.
 **Note**: your nodejs version should be 4+.
 
 ## Demo
-- **using ul datasource**(this feature comes from [Tobyee's good idea:blush:](https://github.com/dabeng/OrgChart/issues/1))
+- **[using ul datasource](http://dabeng.github.io/OrgChart/ul-datasource/)**(this feature comes from [Tobyee's good idea:blush:](https://github.com/dabeng/OrgChart/issues/1))
 ```html
 <!-- wrap the text node with <a href="#"> , <span>, blabla is also OK. Note:text node must immediately follow the <li> tag, with no intervening characters of any kind.  -->
 <ul id="ul-data">
