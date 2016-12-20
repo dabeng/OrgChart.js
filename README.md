@@ -308,6 +308,114 @@ orgchart = new OrgChart({
 ```
 ![integrate map](http://dabeng.github.io/OrgChart.js/integrate-map/recorder.gif)
 
+- **I wanna edit orgchart**
+
+With the help of exposed core methods(addParent(), addSiblings(), addChildren(), removeNodes()) of orgchart plugin, we can finish this task easily.
+```js
+import OrgChart from '../js/orgchart.min.js';
+
+function addNodes(orgchart) {
+  let chartContainer = document.getElementById('chart-container'),
+    nodeVals = [];
+
+  Array.from(document.getElementById('new-nodelist').querySelectorAll('.new-node'))
+    .forEach(item => {
+      let validVal = item.value.trim();
+        
+      if (validVal) {
+        nodeVals.push(validVal);
+      }
+    });
+  let selectedNode = document.getElementById(document.getElementById('selected-node').dataset.node);
+
+  if (!nodeVals.length) {
+    alert('Please input value for new node');
+    return;
+  }
+  let nodeType = document.querySelector('input[name="node-type"]:checked');
+
+  if (!nodeType) {
+    alert('Please select a node type');
+    return;
+  }
+  if (nodeType.value !== 'parent' && !document.querySelector('.orgchart')) {
+    alert('Please creat the root node firstly when you want to build up the orgchart from the scratch');
+    return;
+  }
+  if (nodeType.value !== 'parent' && !selectedNode) {
+    alert('Please select one node in orgchart');
+    return;
+  }
+
+  if (nodeType.value === 'parent') {
+    if (!chartContainer.children.length) {// if the original chart has been deleted
+      orgchart = new OrgChart({
+        'chartContainer': '#chart-container',
+        'data' : { 'name': nodeVals[0] },
+        'exportButton': true,
+        'exportFilename': 'SportsChart',
+        'parentNodeSymbol': 'fa-th-large',
+        'createNode': function(node, data) {
+          node.id = getId();
+        }
+      });
+      orgchart.chart.classList.add('view-state');
+    } else {
+      orgchart.addParent(chartContainer.querySelector('.node'), { 'name': nodeVals[0], 'Id': getId() });
+    }
+  } else if (nodeType.value === 'siblings') {
+    orgchart.addSiblings(selectedNode, {
+      'siblings': nodeVals.map(item => {
+        return { 'name': item, 'relationship': '110', 'Id': getId() };
+      })
+    });
+  } else {
+    let hasChild = selectedNode.parentNode.colSpan > 1;
+
+    if (!hasChild) {
+      let rel = nodeVals.length > 1 ? '110' : '100';
+
+      orgchart.addChildren(selectedNode, {
+        'children': nodeVals.map(item => {
+          return { 'name': item, 'relationship': rel, 'Id': getId() };
+        })
+      });
+    } else {
+      orgchart.addSiblings(closest(selectedNode, el => el.nodeName === 'TABLE').querySelector('.nodes').querySelector('.node'),
+        { 'siblings': nodeVals.map(function(item) { return { 'name': item, 'relationship': '110', 'Id': getId() }; })
+      });
+    }
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function () {
+  let orgchart,
+    datascource = {
+      'name': 'Ball game',
+      'children': [
+        { 'name': 'Football' },
+        { 'name': 'Basketball' },
+        { 'name': 'Volleyball' }
+      ]
+    };
+
+  orgchart = new OrgChart({
+    'chartContainer': '#chart-container',
+    'data' : datascource,
+    'exportButton': true,
+    'exportFilename': 'SportsChart',
+    'parentNodeSymbol': 'fa-th-large',
+    'createNode': function(node, data) {
+      node.id = getId();
+    }
+  });
+
+  document.getElementById('btn-add-nodes').addEventListener('click', () => addNodes(orgchart));
+
+});
+```
+![edit orgchart](http://dabeng.github.io/OrgChart.js/edit-orgchart/recorder.gif)
+
 - **I wanna drag & drop the nodes of orgchart**
 
 Users are allowed to drag & drop the nodes of orgchart when option "draggable" is assigned to true(**Note**: this feature doesn't work on IE due to its poor support for HTML5 drag & drop API).
@@ -417,6 +525,25 @@ let datasource = {
 In fact, this is a wonderful solution to display a orgchart which includes a huge number of node data.
 
 ![multiple layers](http://dabeng.github.io/OrgChart.js/multiple-layers/recorder.gif)
+
+- **I want a hybrid(horizontal + vertical) chart**
+
+This feature is inspired by the issues([Aligning Children Vertical](https://github.com/dabeng/OrgChart/issues/46), [Hybrid(horizontal + vertical) OrgChart](https://github.com/dabeng/OrgChart/issues/61)). Thank [mfahadi](https://github.com/mfahadi) and [Destructrix](https://github.com/Destructrix) for their constructive suggestions:blush:
+
+From now on, users never have to worry about how to align a huge of nodes in one screen of browser. The option "verticalDepth" allows users to align child nodes vertically from the given depth.
+
+**Note**: currently, this option is incompatible with many other options or methods, like direction, drag&drop, addChildren(), removeNodes(), getHierarchy() and so on. These conflicts will be solved one by one in the later versions.
+
+```js
+let orgchart = new OrgChart({
+  'chartContainer': '#chart-container',
+  'data' : datascource,
+  'nodeContent': 'title',
+  'verticalDepth': 3, // From the 3th level of orgchart, nodes will be aligned vertically.
+  'depth': 4
+});
+```
+![hybrid layout](http://dabeng.github.io/OrgChart.js/vertical-depth/snapshot.png)
 
 ## Usage
 
