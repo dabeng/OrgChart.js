@@ -19,7 +19,7 @@
 - touch-enabled plugin for mobile divice
 
 ## Demo
-- **[using ul datasource](http://dabeng.github.io/OrgChart.js/ul-datasource/)**(this feature comes from [Tobyee's good idea:blush:](https://github.com/dabeng/OrgChart/issues/1))
+- **using ul datasource**(this feature comes from [Tobyee's good idea:blush:](https://github.com/dabeng/OrgChart/issues/1))
 ```html
 <!-- wrap the text node with <a href="#"> , <span>, blabla is also OK. Note:text node must immediately follow the <li> tag, with no intervening characters of any kind.  -->
 <ul id="ul-data">
@@ -49,7 +49,7 @@ let orgchart = new OrgChart({
 ```
 ![ul datasource](http://dabeng.github.io/OrgChart.js/ul-datasource/snapshot.png)
 
-- **[using local datasource](http://dabeng.github.io/OrgChart.js/local-datasource/)**
+- **using local datasource**
 ```js
 let datascource = {
   'name': 'Lao Lao',
@@ -84,7 +84,7 @@ orgchart = new OrgChart({
 ```
 ![local datasource](http://dabeng.github.io/OrgChart.js/local-datasource/recorder.gif)
 
-- **[I wanna pan&zoom the orgchart](http://dabeng.github.io/OrgChart.js/pan-zoom/)**
+- **I wanna pan&zoom the orgchart**
 
 ![pan & zoom](http://dabeng.github.io/OrgChart.js/pan-zoom/recorder.gif)
 
@@ -92,7 +92,7 @@ orgchart = new OrgChart({
 
   Top to Bottom -- default direction, as you can see all other examples on this page.
 
-  [Bottom to Top](http://dabeng.github.io/OrgChart.js/direction/bottom2top)
+  Bottom to Top
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -104,7 +104,7 @@ let orgchart = new OrgChart({
 ```
 ![Bottom to Top](http://dabeng.github.io/OrgChart.js/direction/b2t.png)
 
-  [Left to Right](http://dabeng.github.io/OrgChart.js/direction/left2right)
+  Left to Right
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -116,7 +116,7 @@ let orgchart = new OrgChart({
 ```
 ![Left to Right](http://dabeng.github.io/OrgChart.js/direction/l2r.png)
 
-  [Right to Left](http://dabeng.github.io/OrgChart.js/direction/right2left)
+  Right to Left
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -128,7 +128,7 @@ let orgchart = new OrgChart({
 ```
 ![Right to Left](http://dabeng.github.io/OrgChart.js/direction/r2l.png)
 
-- **[I wanna show/hide left/right sibling nodes respectively by clicking left/right arrow](http://dabeng.github.io/OrgChart.js/toggle-sibs-resp/)**
+- **I wanna show/hide left/right sibling nodes respectively by clicking left/right arrow**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -140,7 +140,7 @@ let orgchart = new OrgChart({
 ```
 ![toggle siblings respectively](http://dabeng.github.io/OrgChart.js/toggle-sibs-resp/recorder.gif)
 
-- **[I wanna load datasource through ajax](http://dabeng.github.io/OrgChart.js/ajax-datasource/)**
+- **I wanna load datasource through ajax**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -152,7 +152,7 @@ let orgchart = new OrgChart({
 ```
 ![ajax datasource](http://dabeng.github.io/OrgChart.js/ajax-datasource/recorder.gif)
 
-- **[I wanna load data on-demand](http://dabeng.github.io/OrgChart.js/ondemand-loading-data/)**
+- **I wanna load data on-demand**
 
 Note: when users use ajaxURL option to build orghchart, they must use json datasource(both local and remote are OK) and set the relationship property of datasource by themselves. All of these staff are used to generate the correct expanding/collapsing arrows for nodes.
 ```js
@@ -187,7 +187,7 @@ orgchart = new OrgChart({
 ```
 ![on-demand loading data](http://dabeng.github.io/OrgChart.js/ondemand-loading-data/recorder.gif)
 
-- **[I wanna customize the structure of node](http://dabeng.github.io/OrgChart.js/option-createNode/)**
+- **I wanna customize the structure of node**
 ```js
 // sample of core source code
 let orgchart = new OrgChart({
@@ -213,7 +213,7 @@ let orgchart = new OrgChart({
 ```
 ![option--createNode](http://dabeng.github.io/OrgChart.js/option-createNode/recorder.gif)
 
-- **[I wanna export the organization chart as a picture](http://dabeng.github.io/OrgChart.js/export-orgchart/)**
+- **I wanna export the organization chart as a picture**
 
 Here, we need the help from [html2canvas](https://github.com/niklasvh/html2canvas).
 ```js
@@ -229,7 +229,7 @@ let orgchart = new OrgChart({
 ```
 ![export orgchart](http://dabeng.github.io/OrgChart.js/export-orgchart/recorder.gif)
 
-- **[I wanna itegrate organization chart with geographic information](http://dabeng.github.io/OrgChart.js/integrate-map/)**
+- **I wanna itegrate organization chart with geographic information**
 
 Here, we fall back on [OpenLayers](https://github.com/openlayers/ol3). It's the most aewsome open-source js library for Web GIS you sholdn't miss.
 ```js
@@ -301,7 +301,7 @@ orgchart = new OrgChart({
 ```
 ![integrate map](http://dabeng.github.io/OrgChart.js/integrate-map/recorder.gif)
 
-- **[I wanna drag & drop the nodes of orgchart](http://dabeng.github.io/OrgChart.js/drag-drop/)**
+- **I wanna drag & drop the nodes of orgchart**
 
 Users are allowed to drag & drop the nodes of orgchart when option "draggable" is assigned to true(**Note**: this feature doesn't work on IE due to its poor support for HTML5 drag & drop API).
 
@@ -325,7 +325,7 @@ let orgchart = new OrgChart({
 });
 ```
 
-- **[I want a method that can decribe the hierarchy of orgchart](http://dabeng.github.io/OrgChart.js/get-hierarchy/)**
+- **I want a method that can decribe the hierarchy of orgchart**
 
 That's where getHierarchy() comes in.
 ```html
@@ -366,7 +366,7 @@ document.querySelector('#btn-export-hier').addEventListener('click', () => {
 ```
 ![get hierarchy](http://dabeng.github.io/OrgChart.js/get-hierarchy/snapshot.png)
 
-- **[I want a color-coded chart](http://dabeng.github.io/OrgChart.js/color-coded/)**
+- **I want a color-coded chart**
 
 It's a so easy task, we just need to append id or className property to node data.
 ```js
@@ -405,7 +405,7 @@ let datasource = {
 ```
 ![color coded](http://dabeng.github.io/OrgChart.js/color-coded/snapshot.png)
 
-- **[I want a multiple-layers chart](http://dabeng.github.io/OrgChart.js/multiple-layers/)**
+- **I want a multiple-layers chart**
 
 In fact, this is a wonderful solution to display a orgchart which includes a huge number of node data.
 
