@@ -18,6 +18,13 @@
 - Users can adopt multiple solutions to build up a huge organization chart(please refer to multiple-layers or hybrid layout sections)
 - touch-enabled plugin for mobile divice
 
+## Getting started
+### Build
+    npm install
+    gulp build
+### Serve
+    gulp serve
+
 ## Demo
 - **using ul datasource**(this feature comes from [Tobyee's good idea:blush:](https://github.com/dabeng/OrgChart/issues/1))
 ```html
