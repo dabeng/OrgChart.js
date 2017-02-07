@@ -366,7 +366,7 @@ export default class OrgChart {
     let that = this,
       table = document.createElement('table');
 
-    nodeData.relationship = '001';
+    nodeData.relationship = nodeData.relationship || '001';
     this._createNode(nodeData, 0)
       .then(function (nodeDiv) {
         let chart = that.chart;
