@@ -12,7 +12,7 @@
     "del": "^2.2.2",
     "gulp": "^3.9.1",
     "gulp-babel": "^6.1.2",
-    "gulp-clean-css": "^2.2.0",
+    "gulp-clean-css": "~3.0.4",
     "gulp-csslint": "^1.0.0",
     "gulp-eslint": "^3.0.1",
     "gulp-plumber": "^1.1.0",
