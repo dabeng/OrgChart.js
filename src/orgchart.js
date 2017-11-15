@@ -37,7 +37,7 @@ export default class OrgChart {
     chart.dataset.options = JSON.stringify(opts);
     chart.setAttribute('class', 'orgchart' + (opts.chartClass !== '' ? ' ' + opts.chartClass : '') +
       (opts.direction !== 't2b' ? ' ' + opts.direction : ''));
-    if (typeof data === 'object') { // local json datasource
+    if (typeof data === 'object' && !data.ajax) { // local json datasource
       this.buildHierarchy(chart, opts.ajaxURL ? data : this._attachRel(data, '00'), 0);
     } else if (typeof data === 'string' && data.startsWith('#')) { // ul datasource
       this.buildHierarchy(chart, this._buildJsonDS(document.querySelector(data).children[0]), 0);
@@ -180,7 +180,7 @@ export default class OrgChart {
     ancestors.forEach((el) => results.push(...el.querySelectorAll(selector)));
     return results;
   }
-  _getJSON(url) {
+  _getJSON(options) {
     return new Promise(function (resolve, reject) {
       let xhr = new XMLHttpRequest();
 
@@ -189,17 +189,21 @@ export default class OrgChart {
           return;
         }
         if (this.status === 200) {
-          resolve(JSON.parse(this.response));
+          resolve(this.response);
         } else {
           reject(new Error(this.statusText));
         }
       }
-      xhr.open('GET', url);
+      xhr.open((options.type || 'GET'), options.url);
       xhr.onreadystatechange = handler;
-      xhr.responseType = 'json';
+      xhr.responseType = options.responseType || 'json';
+      let data = options.data || {};
       // xhr.setRequestHeader('Accept', 'application/json');
       xhr.setRequestHeader('Content-Type', 'application/json');
-      xhr.send();
+      for(let i in options.headers){
+        xhr.setRequestHeader(i, options.headers[i]);
+      }
+      xhr.send(JSON.stringify(data));
     });
   }
   _buildJsonDS(li) {
