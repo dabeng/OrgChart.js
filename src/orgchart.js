@@ -1024,6 +1024,12 @@ export default class OrgChart {
       if (opts.toggleSiblingsResp) {
         let prevSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.previousElementSibling,
           nextSib = this._closest(node, (el) => el.nodeName === 'TABLE').parentNode.nextElementSibling;
+         
+        // prevent crash if sibling not present
+        if ((hEdge.classList.contains('leftEdge') && !prevSib) ||
+            (hEdge.classList.contains('rightEdge') && !nextSib)) { 
+          return;
+        }     
 
         if (hEdge.classList.contains('leftEdge')) {
           if (prevSib.classList.contains('hidden')) {
