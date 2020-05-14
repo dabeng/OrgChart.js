@@ -1430,8 +1430,8 @@ export default class OrgChart {
     // Construct the node
     let that = this,
       opts = this.options,
-      nodeWrapper,
-      childNodes = nodeData.children,
+      nodeWrapper,      
+      childNodes = (nodeData.children && nodeData.children.length > 0) && nodeData.children,
       isVerticalNode = opts.verticalDepth && (level + 1) >= opts.verticalDepth;
 
     if (Object.keys(nodeData).length > 1) { // if nodeData has nested structure
