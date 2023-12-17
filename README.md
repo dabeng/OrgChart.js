@@ -3,7 +3,7 @@
 # [jQuery version](http://github.com/dabeng/OrgChart)
 # [Web Components version](http://github.com/dabeng/OrgChart-Webcomponents)
 # [Vue.js Version](https://github.com/dabeng/vue-orgchart)
-# [Angular Version -- the most space-saving solution](https://github.com/dabeng/ng-orgchart)
+# [Angular Version](https://github.com/dabeng/ng-orgchart)
 # [React Version](https://github.com/dabeng/react-orgchart)
 
 ## Foreword
