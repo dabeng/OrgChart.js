@@ -1179,11 +1179,15 @@ export default class OrgChart {
         let ghostNodeWrapper = document.createElement('img');
 
         ghostNodeWrapper.src = 'data:image/svg+xml;utf8,' + (new XMLSerializer()).serializeToString(ghostNode);
-        event.dataTransfer.setDragImage(ghostNodeWrapper, xOffset, yOffset);
+        if(opts.useGhostImage){
+          event.dataTransfer.setDragImage(ghostNodeWrapper, xOffset, yOffset);
+        }
         nodeCover.setAttribute('fill', 'rgb(255, 255, 255)');
         nodeCover.setAttribute('stroke', 'rgb(191, 0, 0)');
       } else {
-        event.dataTransfer.setDragImage(ghostNode, xOffset, yOffset);
+        if(opts.useGhostImage){
+          event.dataTransfer.setDragImage(ghostNode, xOffset, yOffset);
+        }
       }
     }
     let dragged = event.target,
