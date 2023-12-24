@@ -1504,7 +1504,7 @@ export default class OrgChart {
 
       if (isVerticalLayer) {
         nodeLayer = document.createElement('ul');
-        if (isHidden) {
+        if (isHidden && level + 2 !== opts.verticalDepth) {
           nodeLayer.classList.add(isHidden.trim());
         }
         if (level + 2 === opts.verticalDepth) {
