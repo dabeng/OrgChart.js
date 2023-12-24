@@ -163,6 +163,20 @@ let orgchart = new OrgChart({
   'depth': 2,
   'nodeContent': 'title'
 });
+
+// sample code for post ajax request
+let orgchart = new OrgChart({
+  'chartContainer': '#chart-container',
+  'data' : {
+    ajax:true,
+    type:'POST',
+    url:'/orgchart/initdata',
+    data:{}, // data will be sent with post request
+    headers:{} // to set request headers
+  },
+  'depth': 2,
+  'nodeContent': 'title'
+});
 ```
 ![ajax datasource](http://dabeng.github.io/OrgChart.js/ajax-datasource/recorder.gif)
 
@@ -198,6 +212,15 @@ orgchart = new OrgChart({
   'nodeContent': 'title',
   'nodeId': 'id'
 });
+
+//  data sample for post ajax request
+'data' : {
+  ajax:true,
+  type:'POST',
+  url:'/orgchart/initdata',
+  data:{}, // data will be sent with post request
+  headers:{} // to set request headers
+},
 ```
 ![on-demand loading data](http://dabeng.github.io/OrgChart.js/ondemand-loading-data/recorder.gif)
 
